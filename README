@@ -1,0 +1,10 @@
+This is an implementation of a minimax optimal level set estimation
+techinque in R.  Contents:
+
+o design.tex -- latex document giving some background, and the design goals
+                of the package.  You can compile it to a pdf with the command
+                `pdflatex design.tex`
+                You may need to run this command multiple times because of the
+                way latex handles (internal) references.
+
+o molevelset -- the source for the R package.
