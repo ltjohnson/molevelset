@@ -1,0 +1,98 @@
+
+\documentclass[11pt]{article}
+
+\usepackage{amsmath, amssymb}
+\usepackage{natbib}
+\usepackage{url}
+
+\renewcommand{\mod}{\mathbin{\rm mod}}
+\newcommand{\opor}{\mathbin{\rm or}}
+\newcommand{\opand}{\mathbin{\rm and}}
+
+\DeclareMathOperator{\logit}{logit}
+
+\newcommand{\abs}[1]{\lvert #1 \rvert}
+
+\begin{document}
+
+\title{Design of molevelset Package}
+
+\author{Leif Johnson}
+
+\maketitle
+
+\section{Introduction}
+
+The purpose of this package is to provide a reasonably fast
+implementation of the minimax optimal level set estimation method set
+forth in \cite{willet-nowak}.  A reference implementation is available
+for Matlab, \cite{willet-code}, but I use \emph{R}.
+
+If we have a function $f:\mathbb{R}^d\mapsto \mathbb{R}$, the level
+set of $f$ is the domain for which $f$ exceeds a threshold.  In the
+notation of \cite{willet-nowak} $\gamma$ is used to denote the
+threshold, and $S_\gamma$ (or sometimes just $S$) is used to denote
+the level set, thus
+\[
+S_\gamma = \{\: x \in \mathbb{R}^d \: | \: f(x) \geq \gamma \: \}
+\]
+Of course we are assuming that instead of $f(x)$, we are observing 
+\[
+y = f(x) + \epsilon
+\]
+where $\epsilon$ is mean zero iid noise.  For a complete
+description/discussion, see \cite{willet-nowak}.
+
+\section{Usage}
+The goal is to provide a function for \emph{R}, that a user could call
+with a form as simple as 
+\[
+\texttt{l.set <- molevelset(X, Y, gamma)}
+\]
+and get back some form of the level set estimation.  Secondly, we will
+provide another function that will allow the user to convert the level
+set estimation to a grid of points estimated to be on the boundary of
+the level set e.g.
+\[
+\texttt{Xp <- boundary.points(molevelset(X, Y, gamma))}
+\]
+
+Optionally, $Y$ may be left \texttt{NULL}, and the last column of $X$
+will be used as $Y$.  For simplicities sake, this document assumes
+that it has not been left \texttt{NULL}.  Internally, $X$ is expected
+to be inside of the region $[0,1]^d$, but we will not burden the user
+with this, the function will automatically translate to $[0,1]^d$ and
+the level set back to the range of $X$.
+
+There are two parameters that control the behavior of the level set
+estimation, $k_{max}$ and $\rho$.  $k_{max}$ is an upper limit on the
+number of splits (in any of the components of the domain) that can be
+used in the tree estimation, and $\rho$ is a penalty factor for tree
+complexity.  $k_{max}$ specifies where the domain of $f$ can be
+split.  The method uses the splits 
+\[
+\{ \: \frac{i}{2^{k_{max}}} \: | \: 1 \leq i \leq 2^{k_{max}} - 1 \: \}
+\]
+$\rho=0$ means no penalty for tree complexity, and $\rho=1$ would
+return a tree with very large boxes (possibly either of the degenerate
+trees, the whole space or the empty set).  Hence the user must be able
+to optionally control the values of these parameters.  No other
+parameters to the function need to be exposed externally.
+
+\begin{thebibliography}{}
+
+
+
+\bibitem[Willet and Nowak(2007)]{willet-nowak}
+  Willett, R.,  and Nowak, R. (2007).
+\newblock ``Minimax Optimal Level Set Estimation.'' 
+\newblock \emph{IEEE Transactions on Image Processing}, \textbf{16}, 2965--2979.
+
+\bibitem[Willet(2007)]{willet-code}
+  Willet, R. (2007).
+\newblock ``Level set estimation toolbox.''  
+\newblock \url{http://people.ee.duke.edu/~willett/Research/levelset.html}
+\end{thebibliography}
+
+\end{document}
+
