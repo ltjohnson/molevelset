@@ -1,10 +1,13 @@
 Package: molevelset
 Type: Package
-Title: What the package does (short line)
-Version: 1.0
-Date: 2010-07-08
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
-License: What license is it under?
+Title: Mini-max level set estimation using dyadic trees.
+Version: 0.1
+Date: 2011-04-08
+Author: Leif Johnson
+Maintainer: Leif Johnson <leif.t.johnson@gmail.com>
+URL: http://github.com/ltjohnson/molevelset
+Description: Implements the level set estimation method as described in
+   Willett, R., and Nowak, R. (2007). “Minimax Optimal Level Set Estimation.” 
+   IEEE Transactions on Image Processing, 16, 2965–2979.
+License: GPL-2
 LazyLoad: yes
