@@ -1,4 +1,4 @@
-find.sibling <- function(box, k, D) {
+find.sibling <- function(box, k, D, gamma, delta, rho, A) {
   sib <- box$box
   nk <- length(sib[[k]])
   # flip the split in dimension k.
@@ -29,6 +29,16 @@ find.parent <- function(box, sib, k, D) {
   parent$children <- list(box, sib)
   parent$nbox <- box$nbox + sib$nbox
   parent
+}
+
+
+# list boxes in a given set
+listboxes <- function(box) {
+  if (is.null(box$inset))
+    return( rbind(listboxes(box$children[[1]]), listboxes(box$children[[2]])) )
+  if (!box$inset) 
+    return( NULL )
+  c(sapply(box$box, splittobox))  
 }
 
 molevelset <- function(X, Y=NULL, gamma=0.5, kmax=3, rho=0.01) {
@@ -66,7 +76,7 @@ molevelset <- function(X, Y=NULL, gamma=0.5, kmax=3, rho=0.01) {
           next
 
         # find the sibling (in this dimension) and parent boxes.
-        sib <- find.sibling(box, k, D[[depth]]) 
+        sib <- find.sibling(box, k, D[[depth]], gamma, delta, rho, A) 
         parent <- find.parent(box, sib, k, D[[depth - 1]])
         if (is.null(parent$cost)) {
           # calculate cost as if the parent box were a terminal node
@@ -96,15 +106,12 @@ molevelset <- function(X, Y=NULL, gamma=0.5, kmax=3, rho=0.01) {
       }
     }
   }
-  # D_0 (D[[1]]) now contains the best tree
-  D[[1]][[ keys(D[[1]])[1] ]]
-}
-
-# list boxes in a given set
-listboxes <- function(box) {
-  if (is.null(box$inset))
-    return( rbind(listboxes(box$children[[1]]), listboxes(box$children[[2]])) )
-  if (!box$inset) 
-    return( NULL )
-  c(sapply(box$box, splittobox))  
+  # D_0 (D[[1]]) now contains the best tree.
+  tmp <- listboxes(D[[1]][[ keys(D[[1]])[1] ]])
+  
+  # I don't know if manually clearing and rm-ing the hashes is necessary.
+  for(i in 1:length(D)) {
+    clear(D[[i]])
+  }
+  tmp
 }

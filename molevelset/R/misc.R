@@ -109,7 +109,10 @@ phi <- function(box, N, delta) {
 
 # compute the risk for a box.
 risk <- function(box, gamma, A) {
-  r <- sum(gamma - getY(box)) / (2 * A)
+  r <- 0
+  Y <- getY(box)
+  if (length(Y))
+    r <- sum(gamma - Y) / (2 * A)
   if (r >= 0) 
     return( list(risk=-r, inset=FALSE) )
   return( list(risk=r, inset=TRUE) )

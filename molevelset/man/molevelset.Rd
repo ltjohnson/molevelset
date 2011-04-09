@@ -1,68 +1,28 @@
 \name{molevelset}
 \alias{molevelset}
-%- Also NEED an '\alias' for EACH other topic documented here.
-\title{
-%%  ~~function to do ... ~~
-}
+\title{Minimax optimal level set estimation.}
 \description{
-%%  ~~ A concise (1-5 lines) description of what the function does. ~~
+does some stuff.
 }
 \usage{
 molevelset(X, Y = NULL, gamma, k.max = 3, rho = 0.05)
 }
-%- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{X}{
-%%     ~~Describe \code{X} here~~
-}
-  \item{Y}{
-%%     ~~Describe \code{Y} here~~
-}
-  \item{gamma}{
-%%     ~~Describe \code{gamma} here~~
-}
-  \item{k.max}{
-%%     ~~Describe \code{k.max} here~~
-}
-  \item{rho}{
-%%     ~~Describe \code{rho} here~~
-}
+  \item{X}{X coordinates.}
+  \item{Y}{Observed function values.  If NULL, the last column of X is used.}
+  \item{gamma}{The threshold for the levelset.}
+  \item{k.max}{Maximum number of splits.}
+  \item{rho}{Tree complexity penalty multiplier.}
 }
 \details{
-%%  ~~ If necessary, more details than the description above ~~
+It does stuff.
 }
-\value{
-%%  ~Describe the value returned
-%%  If it is a LIST, use
-%%  \item{comp1 }{Description of 'comp1'}
-%%  \item{comp2 }{Description of 'comp2'}
-%% ...
-}
+\value{ A Matrix of the boxes.  }
 \references{
-%% ~put references to the literature/web site here ~
+Willet and Nowak.
 }
 \author{
-%%  ~~who you are~~
+Leif Johnson.
 }
-\note{
-%%  ~~further notes~~
-}
-
-%% ~Make other sections like Warning with \section{Warning }{....} ~
-
-\seealso{
-%% ~~objects to See Also as \code{\link{help}}, ~~~
-}
-\examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
-
-## The function is currently defined as
-function(X, Y=NULL, gamma, k.max=3, rho=0.05) {
-  }
-}
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line
+\keyword{ levelset }
+\keyword{ trees }
