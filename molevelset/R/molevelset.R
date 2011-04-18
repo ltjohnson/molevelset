@@ -36,9 +36,9 @@ find.parent <- function(box, sib, k, D) {
 listboxes <- function(box) {
   if (is.null(box$inset))
     return( rbind(listboxes(box$children[[1]]), listboxes(box$children[[2]])) )
-  if (!box$inset) 
-    return( NULL )
-  c(sapply(box$box, splittobox))  
+  # return box sides, but with the last column (0|1) representing 
+  # (out of set|in set) respectively.
+  c(sapply(box$box, splittobox), ifelse(box$inset, 1, 0))  
 }
 
 molevelset <- function(X, Y=NULL, gamma=0.5, kmax=3, rho=0.01) {
