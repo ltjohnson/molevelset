@@ -1,4 +1,4 @@
-#IFNDEF HASH_H
+#ifndef HASH_H
 #define HASH_H
 
 typedef struct hash_entry {
