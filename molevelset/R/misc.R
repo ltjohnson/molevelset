@@ -121,7 +121,7 @@ risk <- function(box, gamma, A) {
 # compute the total cost for a box
 getcost <- function(box, N, gamma, delta, rho, A) {
   r <- risk(box, gamma, A) 
-  list(cost=r$risk + rho * phi(box, gamma, delta), inset=r$inset)
+  list(cost=r$risk + rho * phi(box, N, delta), inset=r$inset)
 }
 
 
