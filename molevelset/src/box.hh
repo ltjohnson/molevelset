@@ -3,12 +3,14 @@
 
 #include <vector>
 #include <string>
+#include <map>
 
 using namespace std;
 
 /* Using left = 1 and right = 2 for compatibility with the reference paper.
    Adding stop = 0 for convenience. */
 enum BoxSplit { STOP_SPLIT = 0, LEFT_SPLIT = 1, RIGHT_SPLIT = 2};
+int BoxLength(vector<BoxSplit>);
 
 /* Convenience structs.  Several MOBox functions return a double, int pair */
 typedef struct { double risk; int inset } MORisk;
@@ -30,10 +32,10 @@ class MOBox {
   private:
     vector<int> pointsIndex;
     double *py, **px;
-    int d, kmax, n;
+    int d, kmax, n, nbox;
     vector< vector<BoxSplit> > splits;
   public:
-    MOBox(int kmax, int dim, int n, double *px, double *py, 
+    MOBox(int kmax, int dim, int n, double **px, double *py, 
           vector< vector<BoxSplit> > splits);
 
     void AddPoint(int i);
@@ -42,8 +44,12 @@ class MOBox {
     MORisk Risk(double gamma, double A);
     MOCost Cost(double gamma, double delta, double rho, double A);
     
-    string GetBoxKey();
+    static string GetBoxKey(vector< vector<BoxSplit> >);
 };
 
+/* For the given n points, x, y, where y is a n-by-1 array and x is a
+   n-by-d array, find the collection of boxes in [0,1]^d that contains the
+   points, using kmax splits in each direction. */
+map<string, MOBox> FindBoxes(int n, int d, int kmax, double **x, double **y);
 
 #endif
