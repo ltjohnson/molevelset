@@ -19,8 +19,12 @@ void GetUnivariateSplits(double x, int kmax, vector<BoxSplit> *p) {
 }
 
 void GetBoxSplits(double *x, int kmax, int d, vector<vector<BoxSplit> > *p) {
-  for(int i = 0; i < d; i++)
+  p->clear();
+  for(int i = 0; i < d; i++) {
+    vector<BoxSplit> tmp;
+    p->push_back(tmp);
     GetUnivariateSplits(x[i], kmax, &p->at(i));
+  }
 }
 
 map<string, MOBox *> *FindBoxes(int n, int d, int kmax, double *x, double *y) {
