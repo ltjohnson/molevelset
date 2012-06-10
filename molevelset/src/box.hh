@@ -10,11 +10,10 @@ using namespace std;
 /* Using left = 1 and right = 2 for compatibility with the reference paper.
    Adding stop = 0 for convenience. */
 enum BoxSplit { STOP_SPLIT = 0, LEFT_SPLIT = 1, RIGHT_SPLIT = 2};
-int BoxLength(vector<BoxSplit>);
 
 /* Convenience structs.  Several MOBox functions return a double, int pair */
-typedef struct { double risk; int inset } MORisk;
-typedef struct { double cost; int inset } MOCost;
+typedef struct { double risk; int inset; } MORisk;
+typedef struct { double cost; int inset; } MOCost;
 
 /***************************************************************************
  * Class to manage boxes in the [0,1]^d cube.  
@@ -31,25 +30,35 @@ typedef struct { double cost; int inset } MOCost;
 class MOBox {
   private:
     vector<int> pointsIndex;
-    double *py, **px;
+    double *py, *px;
+    double A;
     int d, kmax, n, nbox;
     vector< vector<BoxSplit> > splits;
   public:
-    MOBox(int kmax, int dim, int n, double **px, double *py, 
+    /* Args:
+     *   kmax: maximum numbe of splits.
+     *   dim:  dimension of x.
+     *   n: number of points.
+     *   px: pointer to x points, array of length n*d, column-major format.
+     *   py: pointer to y points, array of length n.
+     *   splits: vector of vector of BoxSplit.  Gives the splits for 
+     *     this box.
+     */
+    MOBox(int kmax, int dim, int n, double *px, double *py, 
           vector< vector<BoxSplit> > splits);
 
+    /* Adds the point with index i to this box. */
     void AddPoint(int i);
 
+    /* Compute the complexity of this box, up to the probability 1-delta. */
     double Phi(double delta);
-    MORisk Risk(double gamma, double A);
-    MOCost Cost(double gamma, double delta, double rho, double A);
+    /* Compute the empirical risk for this box for the level gamma. */
+    MORisk Risk(double gamma);
+    /* Compute the cost of this box, using level gamma, probability
+       1-delta, and complexity penalty rho. */
+    MOCost Cost(double gamma, double delta, double rho);
     
     static string GetBoxKey(vector< vector<BoxSplit> >);
 };
-
-/* For the given n points, x, y, where y is a n-by-1 array and x is a
-   n-by-d array, find the collection of boxes in [0,1]^d that contains the
-   points, using kmax splits in each direction. */
-map<string, MOBox> FindBoxes(int n, int d, int kmax, double **x, double **y);
 
 #endif
