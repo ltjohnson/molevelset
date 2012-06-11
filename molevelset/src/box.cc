@@ -5,21 +5,35 @@
 
 MOBox::MOBox(int kmax, int dim, int n, double *px, double *py, 
              vector< vector<BoxSplit> > splits) {
-  n = n;
-  kmax = kmax;
-  dim = dim;
-  px = px;
-  py = py;
+  this.n = n;
+  this.kmax = kmax;
+  this.dim = dim;
+  this.px = px;
+  this.py = py;
   // TODO: Throw exception if splits doesn't have the right shape.
-  splits = splits;
-  A = fabs(py[0]);
+  this.splits = splits;
+  this.A = fabs(py[0]);
   for(int i = 1; i < n; i++) 
-    if (A < fabs(py[i]))
-      A = fabs(py[i]);
+    if (this.A < fabs(py[i]))
+      this.A = fabs(py[i]);
+  for(int i = 0; i < dim; i++)
+    this.checked.push_back(0);
 }
   
+int MOBox::GetChecked(int i) {
+  return checked.at(i);
+}
+
+void MOBox::SetChecked(int i) {
+  return checked.at(i) = 1;
+}
+
 void MOBox::AddPoint(int i) {
   pointsIndex.push_back(i);
+}
+
+vector<int> MOBox::GetPoints() {
+  return(pointsIndex);
 }
 
 MORisk MOBox::Risk(double gamma) {

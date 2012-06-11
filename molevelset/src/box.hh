@@ -30,6 +30,7 @@ typedef struct { double cost; int inset; } MOCost;
 class MOBox {
   private:
     vector<int> pointsIndex;
+    vector<int> checked;
     double *py, *px;
     double A;
     int d, kmax, n, nbox;
@@ -49,6 +50,14 @@ class MOBox {
 
     /* Adds the point with index i to this box. */
     void AddPoint(int i);
+    /* Return vector of point indicies. */
+    vector<int> GetPoints();
+
+    /* Check whether the collapsing the split in dimension i has been
+       checked. */
+    int GetChecked(int);
+    /* Mark dimension i as checked. */
+    void SetChecked(int);
 
     /* Compute the complexity of this box, up to the probability 1-delta. */
     double Phi(double delta);

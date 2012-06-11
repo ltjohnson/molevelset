@@ -162,6 +162,71 @@ int TestFindBoxes() {
   int success = 1;
   cout << "TestFindBoxes\n";
 
+  cout << "  Checking 3 points in [0, 1]^2...\n";
+  double x[] = {0.3, 0.7, 0.1, 0.4, 0.2, 0.8};
+  double y[] = {1.0, 1.1, 1.2};
+  /* Should find boxes with keys '1122', '1212', and '2111' containing
+     points 2, 0, and 1, respectively.  */
+  map<string, MOBox *> *pBoxMap = FindBoxes(3, 2, 2, x, y);
+
+  cout << "    Checking for 3 boxes...";
+  int nBoxes = pBoxMap->size();
+  if (nBoxes == 3) {
+    cout << " Success.\n";
+  } else {
+    cout << " FAILURE.  Found " << nBoxes << ".\n";
+    success = 0;
+  }
+  map<string, MOBox *>::iterator it= pBoxMap->begin();
+  cout << "    Checking first box has key 1122 and point 2...";
+  vector<int> points = it->second->GetPoints();
+  if (it->first == "1122" && points.size() == 1 && points.at(0) == 2) {
+    cout << " Success.\n";
+  } else {
+    cout << " FAILURE.  Found key " << it->first;
+    if (points.size()) {
+      cout << " with first point " << points.at(0) << ".\n";
+    } else {
+      cout << " with no points.\n";
+    }
+    success = 0;
+  }
+  
+  it++;
+  cout << "    Checking second box has key 1212 and point 0...";
+  points = it->second->GetPoints();
+  if (it->first == "1212" && points.size() == 1 && points.at(0) == 0) {
+    cout << " Success.\n";
+  } else {
+    cout << " FAILURE.  Found key " << it->first;
+    if (points.size()) {
+      cout << " with first point " << points.at(0) << ".\n";
+    } else {
+      cout << " with no points.\n";
+    }
+    success = 0;
+  }
+  
+  it++;
+  cout << "    Checking third box has key 2111 and point 1...";
+  points = it->second->GetPoints();
+  if (it->first == "2111" && points.size() == 1 && points.at(0) == 1) {
+    cout << " Success.\n";
+  } else {
+    cout << " FAILURE.  Found key " << it->first;
+    if (points.size()) {
+      cout << " with first point " << points.at(0) << ".\n";
+    } else {
+      cout << " with no points.\n";
+    }
+    success = 0;
+  }
+
+  /* cleanup */
+  for(it = pBoxMap->begin(); it != pBoxMap->end(); it++)
+    delete it->second;
+  delete pBoxMap;
+
   return(success);
 }
 
