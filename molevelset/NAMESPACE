@@ -1,3 +1,6 @@
 import(hash)
 
+useDynLib(molevelset)
+
 export(molevelset)
+export(molevelsetCVersion)
