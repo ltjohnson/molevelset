@@ -3,6 +3,13 @@
 #include <vector>
 #include <map>
 
+/* Collapses the boxes in the map pOldLevel by deleting one split at a
+   time.  The optimal parent box for each combination is stored in
+   the returned map. */
+map<string, MOBox *> *CollapseLevel(map<string, MOBox *> *pOldLevel, int dim, 
+				    int kmax, double gamma, double rho, 
+				    double delta);
+
 vector<MOBox *> FindTree(double *px, double *py, int n, int dim, int kmax,
 			 double gamma, double rho, double delta) {
   /* Initialize the hash for each level of the algorithm. */
@@ -15,11 +22,13 @@ vector<MOBox *> FindTree(double *px, double *py, int n, int dim, int kmax,
   }
 
   /* Extract minimax optimal tree. */
+  vector<MOBox *> optimalTree;
+
   /* Cleanup. */
   for(int i = 0; i < D.size(); i++)
-    delte D.at(i);
+    delete D.at(i);
 
-  return(COMPUTED VECTOR OF BOXES THAT IS THE TREE);
+  return(optimalTree);
 }
 
 MOBox *MakeParentBox(MOBox *pBox, MOBox *pSib, int i, 
@@ -29,7 +38,7 @@ MOBox *MakeParentBox(MOBox *pBox, MOBox *pSib, int i,
   }
   MOBox *pParent = pBox->CreateParentBox(i);
   if (pSib) {
-    pParent->AddPoint(pSib->GetPoints);
+    pParent->AddPoint(pSib->GetPoints());
     if (pParent->Cost(gamma, delta, rho).cost > 
 	pBox->Cost(gamma, delta, rho).cost + 
 	pSib->Cost(gamma, delta, rho).cost) {
@@ -44,7 +53,7 @@ map<string, MOBox *> *CollapseLevel(map<string, MOBox *> *pOldLevel, int dim,
 				    double delta) {
   map<string, MOBox *> *pNewLevel = new map<string, MOBox *>;
   map<string, MOBox *>::iterator it, sib, parent;
-  for(it=pOldLevel->first(); it != pOldLevel->end(); it++) {
+  for(it=pOldLevel->begin(); it != pOldLevel->end(); it++) {
     MOBox *pBox = it->second;
     for(int i = 0; i < dim; i++) {
       /* don't double check splits, and don't check non-existant splits */
@@ -55,11 +64,12 @@ map<string, MOBox *> *CollapseLevel(map<string, MOBox *> *pOldLevel, int dim,
       string sibKey = pBox->GetSiblingKey(i);
       sib = pOldLevel->find(pBox->GetSiblingKey(i));
       if (sib != pOldLevel->end()) {
-	pSib = sib->second();
+	pSib = sib->second;
 	pSib->SetChecked(i);
       }
       MOBox *pParent = MakeParentBox(pBox, pSib, i, gamma, delta, rho);
-      parent = pNewLevel->find(pParent->GetBoxKey());
+      string parentKey = pParent->GetBoxKey();
+      parent = pNewLevel->find(parentKey);
       if (parent == pNewLevel->end()) {
 	/* Parent not there, add new level. */
 	pNewLevel->insert(pair<string, MOBox *>(parentKey, pParent));

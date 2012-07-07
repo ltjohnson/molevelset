@@ -37,6 +37,11 @@ void MOBox::AddPoint(int i) {
   pointsIndex.push_back(i);
 }
 
+void MOBox::AddPoint(vector<int> points) {
+  for(int i = 0; i < points.size(); i++)
+    this->AddPoint(points[i]);
+}
+
 vector<int> MOBox::GetPoints() {
   return(pointsIndex);
 }

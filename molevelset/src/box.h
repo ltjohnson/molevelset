@@ -50,6 +50,7 @@ class MOBox {
 
     /* Adds the point with index i to this box. */
     void AddPoint(int i);
+    void AddPoint(vector<int>);
     /* Return vector of point indicies. */
     vector<int> GetPoints();
 
@@ -77,6 +78,7 @@ class MOBox {
     vector<vector<BoxSplit> > GetSiblingSplits(int);
     string GetParentKey(int);
   
+    /* Create the parent box containing this box by dropping split i */
     MOBox *CreateParentBox(int);
 };
 

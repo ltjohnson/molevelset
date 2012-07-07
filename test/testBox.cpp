@@ -129,12 +129,42 @@ int TestGetPoints() {
   return(success);
 }
 
+int TestAddPoints() {
+  int success = 1;
+  cout << "TestAddPoints\n";
+  
+  cout << "  Checking that pBox->AddPoints([1, 2]) stores points 1 and 2...";
+  vector<vector<BoxSplit> > splits;
+  vector<BoxSplit> tmp;
+  splits.push_back(tmp);
+  splits.at(0).push_back(LEFT_SPLIT);
+  double x[] = {0.1, 0.2, 0.3};
+  double y[] = {0.0, 0.1, -1.2};
+  MOBox *pBox = new MOBox(1, 1, 3, x, y, splits);
+  vector<int> points;
+  points.push_back(1); 
+  points.push_back(2);
+  pBox->AddPoint(points);
+  vector<int> actual = pBox->GetPoints();
+  if (points == actual) {
+    cout << " Success.\n";
+  } else {
+    cout << " FAILURE.  Got [";
+    for(int i = 0; i < actual.size(); i++) 
+      cout << actual[i] << ", ";
+    cout << "]\n";
+    success = 0;
+  }
+  return(success);
+}
+
 int main(int argc, char**argv) {
   int success = 1;
   success *= TestGetBoxKey();
   success *= TestBoxGetSiblingKey();
   success *= TestGetParentKey();
   success *= TestGetPoints();
+  success *= TestAddPoints();
   if (!success) {
     cout << "FAILURE.  Some tests failed.\n";
   } else {
