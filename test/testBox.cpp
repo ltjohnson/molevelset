@@ -101,6 +101,54 @@ int TestGetParentKey() {
   return(success);
 }
 
+int TestBoxCreateParentBox() {
+  int success = 1;
+
+  cout << "TestBoxCreateParentBox\n";
+  double x[] = {0.1, 0.2, 0.4, 0.5};
+  double y[] = {0.25, 1};
+  vector<vector<BoxSplit> > splits;
+  for(int i = 0; i < 2; i++) {
+    vector<BoxSplit> tmp;
+    splits.push_back(tmp);
+  }
+  splits.at(0).push_back(LEFT_SPLIT);
+  splits.at(0).push_back(STOP_SPLIT);
+  splits.at(1).push_back(RIGHT_SPLIT);
+  splits.at(1).push_back(RIGHT_SPLIT);
+  MOBox *pBox = new MOBox(2, 2, 2, x, y, splits);
+  pBox->AddPoint(1);
+  MOBox *pParent = pBox->CreateParentBox(1);
+
+  string key = pBox->GetBoxKey();
+  string parentKey = pParent->GetBoxKey();
+
+  cout << "  Checking key == \"1022\" && parentKey == \"1020\"...";
+  if (key == "1022" && parentKey == "1020") {
+    cout << " Success.\n";
+  } else {
+    success = 0;
+    cout << " FAILURE.  Got key == \"" << key << "\" and parentKey == \""
+	 << parentKey << "\".\n";
+  }
+  cout << "  Checking parent contains point 1...";
+  vector<int> expected;
+  expected.push_back(1);
+  if (expected == pParent->GetPoints()) {
+    cout << " Success.\n";
+  } else {
+    success = 0;
+    cout << " FAILURE.  Parent has points ";
+    vector<int> points = pParent->GetPoints();
+    for(int i = 0; i < points.size(); i++)
+      cout << points[i] << ", ";
+    cout << ".\n";
+  }
+  delete pBox;
+  delete pParent;
+  return(success);
+}
+
 int TestGetPoints() {
   int success = 1;
   cout << "TestGetPoints\n";
@@ -163,6 +211,7 @@ int main(int argc, char**argv) {
   success *= TestGetBoxKey();
   success *= TestBoxGetSiblingKey();
   success *= TestGetParentKey();
+  success *= TestBoxCreateParentBox();
   success *= TestGetPoints();
   success *= TestAddPoints();
   if (!success) {
