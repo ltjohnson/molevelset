@@ -1,7 +1,7 @@
 #ifndef MISC_H
 #define MISC_H
 
-#include "box.hh"
+#include "box.h"
 
 /* Count the number of splits in the given vector.  The number of
    splits is defined as the count of the first elements of the vector

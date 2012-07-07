@@ -1,4 +1,4 @@
-#include "misc.hh"
+#include "misc.h"
 
 int BoxLength(vector<BoxSplit> box) {
   int L;
@@ -37,7 +37,7 @@ map<string, MOBox *> *FindBoxes(int n, int d, int kmax, double *x, double *y) {
       tmpX[j] = x[j*n + i];
     GetBoxSplits(tmpX, kmax, d, &box);
     string key = MOBox::GetBoxKey(box);
-    map<string, MOBox *>::iterator it= pBoxMap->find(key);
+    map<string, MOBox *>::iterator it = pBoxMap->find(key);
     if (it == pBoxMap->end()) {
       /* This box isn't in the map, create and add it */
       pBox = new MOBox(kmax, d, n, x, y, box);

@@ -115,3 +115,7 @@ molevelset <- function(X, Y=NULL, gamma=0.5, kmax=3, rho=0.01) {
   }
   tmp
 }
+
+molevelsetCVersion <- function(X, Y, kmax, gamma, rho=0.05, delta=0.05) {
+  .Call("molevelset", X, Y, kmax, gamma, rho, delta)
+}

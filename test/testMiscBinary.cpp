@@ -1,6 +1,6 @@
-/* File to test the functions in misc.hh */
-#include "misc.hh"
-#include "box.hh"
+/* File to test the functions in misc.h */
+#include "misc.h"
+#include "box.h"
 
 #include <iostream>
 #include <vector>
@@ -230,11 +230,55 @@ int TestFindBoxes() {
   return(success);
 }
 
+int TestFindBoxesSingleBox() {
+  int success = 1;
+  cout << "TestFindBoxesSingleBox\n";
+  
+  double x[2];
+  x[0] = 0.55; x[1] = 0.55;
+  double y[1]; y[0] = 0.3;
+  map<string, MOBox *> *pBoxMap = FindBoxes(1, 2, 3, x, y);
+  
+  cout << "  Checking for 1 box...";
+  if (pBoxMap->size() == 1) {
+    cout << " Success.\n";
+  } else {
+    cout << " FAILURE.  Found " << pBoxMap->size() << " boxes.\n";
+    return(0);
+  }
+  
+  map<string, MOBox *>::iterator it = pBoxMap->begin();
+  cout << "  Checking that box has key 211211...";
+  if (it->first == "211211") {
+    cout << " Success.\n";
+  } else {
+    cout << " FAILURE.  Has key '" << it->first << "'.\n";
+    success = 0;
+  }
+  
+  cout << "  Checking that box has point 0...";
+  vector<int> points = it->second->GetPoints();
+  if (points.size() == 1 && points.at(0) == 0) {
+    cout << " Success.\n";
+  } else {
+    cout << " FAILURE.  Found " << points.size() << " points.";
+    if (points.size()) 
+      cout << "  First point is point " << points.at(0) << ".";
+    cout << "\n";
+  }
+  
+  /* cleanup */
+  delete pBoxMap;
+
+  return(success);
+}
+
 int main(int argc, char**argv) {
   int success = 1;
   success *= TestBoxLength();
   success *= TestGetUnivariateSplits();
   success *= TestGetBoxSplits();
+  success *= TestFindBoxesSingleBox();
   success *= TestFindBoxes();
   if (!success) {
     cout << "FAILURE.  Some tests failed.\n";

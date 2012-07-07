@@ -1,8 +1,8 @@
 #ifndef FINDTREE_H
 #define FINDTREE_H
 
-#include "box.hh"
-#include "misc.hh"
+#include "box.h"
+#include "misc.h"
 
 /* Find the minimax tree for the n points given by *px in [0, 1]^dim
    (n-by-d array stored in column-major format) *py.  kmax splits are

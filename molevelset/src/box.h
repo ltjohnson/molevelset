@@ -29,11 +29,11 @@ typedef struct { double cost; int inset; } MOCost;
  */
 class MOBox {
   private:
-    vector<int> pointsIndex;
-    vector<int> checked;
+    vector<int> pointsIndex, checked;
+    vector<MOBox *> children;
     double *py, *px;
     double A;
-    int d, kmax, n, nbox;
+    int dim, kmax, n, nbox, terminalNode;
     vector< vector<BoxSplit> > splits;
   public:
     /* Args:
@@ -67,7 +67,17 @@ class MOBox {
        1-delta, and complexity penalty rho. */
     MOCost Cost(double gamma, double delta, double rho);
     
+    /* Add a children to this box, order doesn't matter */
+    void SetChildren(MOBox *, MOBox *);
+    vector<MOBox *> GetChildren();
+
+    string GetBoxKey();
     static string GetBoxKey(vector< vector<BoxSplit> >);
+    string GetSiblingKey(int);
+    vector<vector<BoxSplit> > GetSiblingSplits(int);
+    string GetParentKey(int);
+  
+    MOBox *CreateParentBox(int);
 };
 
 #endif
