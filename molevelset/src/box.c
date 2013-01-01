@@ -70,20 +70,77 @@ void add_point(box *p, int i) {
   p->i[p->n++] = i;
 }
 
+int compare_splits(int d, unsigned int *s1, int *ns1, unsigned int *s2, int *ns2) {
+  /* Compare two sets of splits, return 0 if unequal, 1 if equal.
+   *
+   * Args:
+   *   d: number of dimensions.
+   *   s1: pointer to splits of first box.
+   *   ns1: pointer to number of splits of first box.
+   *   s2: pointer to splits of second box.
+   *   ns2: pointer to number of splits of second box.
+   * Returns:
+   *   1 if splits are equal, 0 otherwise.
+   */
+  int i, j;
+  unsigned int split_mask;
+
+  if (!s1 || !s2 || !ns1 || !ns2) {
+    return !s1 & !s2 & !ns1 & !ns2;
+  }
+  
+  for (i = 0; i < d; i++) {
+    if (ns1[i] != ns2[i]) {
+      return 0;
+    }
+    split_mask = 0;
+    for (j = 0; j < ns1[i]; j++) {
+      split_mask |= 1 << j;
+    }
+    if ((s1[i] ^ s2[i]) & split_mask) {
+      return 0;
+    }
+  }
+  
+  return 1;
+}
+
+void split_to_interval(unsigned int split, int nsplit, double *x1, double *x2) {
+  /* Convert a univariate split to the real interval defined by the split.
+   *
+   * Args:
+   *   split: the split.
+   *   nsplit: number of splits.
+   *   x1: pointer to the left edge of the interval.
+   *   x2: pointer to the right edge of the interval.
+   */
+  *x1 = 0;
+  *x2 = 1;
+  
+  for (int i = 0; i < nsplit; i++) {
+    double next_split = (*x1 + *x2) / 2;
+    if ((split & (1 << i)) == LEFT_SPLIT) {
+      *x2 = next_split;
+    } else {
+      *x1 = next_split;
+    }
+  }
+}
+
 unsigned int point_to_split(double *px, int d, int k_max) {
-  int i, go_left;
   double next_split = 0.5; 
   double divisor = 0.25;
   unsigned int split = 0;
   
-  for (i = 0; i < k_max; i++) {
+  for (int i = 0; i < k_max; i++) {
     /* go_left = <Is this point left of the next split?> */
-    go_left = *px < next_split;
-    /* Assign left or right to the current split. */
+    int go_left = *px < next_split;
     split |= (go_left ? LEFT_SPLIT : RIGHT_SPLIT) << i;
-    next_split = next_split + (go_left ? -1 : 1) / divisor;
+    next_split = next_split + (go_left ? -1 : 1) * divisor;
     divisor = divisor / 2;
   }
+  
+  return split;
 }
 
 void point_to_box(double *px, int d, int k_max, unsigned int *pbox) {
@@ -135,8 +192,9 @@ box_collection *points_to_boxes(double *px, int n, int d, int k_max) {
   p_collection = new_collection(d);
   
   for(i = 0; i < n; i++) {
-    for(j = 0; j < d; j++)
+    for(j = 0; j < d; j++) {
       point[j] = px[i + j * n];
+    }
 
     point_to_box(point, d, k_max, splits);
 
@@ -150,4 +208,80 @@ box_collection *points_to_boxes(double *px, int n, int d, int k_max) {
   }
   
   return p_collection;
+}
+
+/**************************************************************************
+ * Functions for manipulating box collections.
+ **************************************************************************/
+int add_box(box_collection *pc, box *pb) {
+  /* Add a box to this collection.
+   *
+   * Args:
+   *   pc: pointer to collection.
+   *   pb: pointer to box to add.
+   * Returns:
+   *   1 if box is succesfully added, 0 otherwise.
+   */
+  box_node *p_node;
+
+  /* Don't add if one of the two pointers are NULL, or if this box is
+   * already in the collection. */
+  if (!pc || !pb || find_box(pc, pb->splits, pb->nsplits)) {
+    return 0;
+  }
+  
+  p_node = (box_node *)malloc(sizeof(box_node));
+  p_node->p = pb;
+  p_node->next = pc->boxes;
+  pc->boxes = p_node;
+  pc->n++;
+  
+  return 1;
+}
+
+box *find_box(box_collection *pc, unsigned int *splits, int *nsplits) {
+  /* Find a box in a collection that matches the given splits.
+   *
+   * Args:
+   *   pc: pointer to box collection.
+   *   splits: pointer to splits for each dimension.
+   *   nsplits: pointer to number of splits in each dimension.
+   * Returns:
+   *   Returns pointer to box that matches the given splits if one is found, 
+   *   NULL otherwise.
+   */
+  box_node *p_node = pc->boxes;
+
+  while(p_node) {
+    if (compare_splits(pc->d, p_node->p->splits, p_node->p->nsplits, splits, 
+		       nsplits)) {
+      return p_node->p;
+    }
+    p_node = p_node->next;
+  }
+  
+  return NULL;
+}
+
+void free_collection(box_collection *p) {
+  /* Free a box collection, all boxes are free-ed.
+   *
+   * Args:
+   *   p: pointer to box collection to free.
+   */
+  box_node *p_node, *tmp;
+
+  if (!p) {
+    return;
+  }
+  
+  p_node = p->boxes;
+  while (p_node) {
+    tmp = p_node->next;
+    free_box(p_node->p);
+    free(p_node);
+    p_node = tmp;
+  }
+  
+  free(p);
 }
