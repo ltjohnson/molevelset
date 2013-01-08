@@ -92,19 +92,19 @@ SEXP box_to_list(box *p, double *px, int n) {
   SET_VECTOR_ELT(box_list, 0, box_i);
   UNPROTECT(1);
   
-  PROTECT(box_X = allocMatrix(REALSXP, p->n, p->d));
+  PROTECT(box_X = allocMatrix(REALSXP, p->n, p->split->d));
   for (int i = 0; i < p->n; i++) {
-    for (int j = 0; j < p->d; j++) {
+    for (int j = 0; j < p->split->d; j++) {
       REAL(box_X)[i + j * p->n] = px[p->i[i] + j * n];
     }
   }
   SET_VECTOR_ELT(box_list, 1, box_X);
   UNPROTECT(1);
 
-  PROTECT(box_matrix = allocMatrix(REALSXP, 2, p->d));
+  PROTECT(box_matrix = allocMatrix(REALSXP, 2, p->split->d));
   double x1, x2;
-  for (int j = 0; j < p->d; j++) {
-    split_to_interval(p->splits[j], p->nsplits[j], &x1, &x2);
+  for (int j = 0; j < p->split->d; j++) {
+    split_to_interval(p->split, j, &x1, &x2);
     REAL(box_matrix)[j * 2] = x1;
     REAL(box_matrix)[j * 2 + 1] = x2;
   }

@@ -2,13 +2,15 @@
 
 #include "box.h"
 
-box *new_box(int d, unsigned int *splits, int *nsplits, int size_guess) {
+/* Some private functions. */
+unsigned int point_to_split(double *px, int d, int k_max);
+void point_to_box(double *px, int d, int k_max, unsigned int *pbox);
+
+box *new_box(box_split *split, int size_guess) {
   /* Create and initialize a new box. 
    *
    * Args:
-   *   d: dimension of box.
-   *   splits: pointer to splits for this box.
-   *   nsplits: pointer to number of splits in each dimension for this box.
+   *   split: split to create.
    *   size_guess: callers guess at number of points to expect.
    *     Numbers smaller than 1 are replaced with 1.
    * Returns:
@@ -21,17 +23,10 @@ box *new_box(int d, unsigned int *splits, int *nsplits, int size_guess) {
   size_guess = 1 > size_guess ? 1 : size_guess;
   
   p = (box *)malloc(sizeof(box));
-  p->d = d;
+  p->split = copy_box_split(split);
   p->n = 0;
   p->isize = size_guess;
   p->i = (int *)malloc(sizeof(int) * size_guess);
-  p->nsplits = (int *)malloc(sizeof(int) * d);
-  p->splits = (unsigned int*)malloc(sizeof(unsigned int) * d);
-  
-  for (j = 0; j < d; j++) {
-    p->nsplits[j] = nsplits[j];
-    p->splits[j] = splits[j];
-  }
 
   return p;
 }
@@ -42,8 +37,7 @@ void free_box(box *p) {
    * Args:
    *   p: pointer to box to free.
    */
-  free(p->splits);
-  free(p->nsplits);
+  free_box_split(p->split);
   free(p->i);
   free(p);
 }
@@ -70,34 +64,36 @@ void add_point(box *p, int i) {
   p->i[p->n++] = i;
 }
 
-int compare_splits(int d, unsigned int *s1, int *ns1, unsigned int *s2, int *ns2) {
+int compare_splits(box_split *ps1, box_split *ps2) {
   /* Compare two sets of splits, return 0 if unequal, 1 if equal.
    *
    * Args:
-   *   d: number of dimensions.
-   *   s1: pointer to splits of first box.
-   *   ns1: pointer to number of splits of first box.
-   *   s2: pointer to splits of second box.
-   *   ns2: pointer to number of splits of second box.
+   *   ps1: pointer to box_split 1.
+   *   ps2: pointer to box_split 2.
    * Returns:
    *   1 if splits are equal, 0 otherwise.
    */
   int i, j;
   unsigned int split_mask;
 
-  if (!s1 || !s2 || !ns1 || !ns2) {
-    return !s1 & !s2 & !ns1 & !ns2;
+  if (!ps1 || !ps2) {
+    return !ps1 & !ps2;
   }
   
-  for (i = 0; i < d; i++) {
-    if (ns1[i] != ns2[i]) {
+  if (ps1->d != ps2->d) {
+    return 0;
+  }
+  
+  for (i = 0; i < ps1->d; i++) {
+    if (ps1->nsplit[i] != ps2->nsplit[i]) {
       return 0;
     }
+    
     split_mask = 0;
-    for (j = 0; j < ns1[i]; j++) {
+    for (j = 0; j < ps1->nsplit[i]; j++) {
       split_mask |= 1 << j;
     }
-    if ((s1[i] ^ s2[i]) & split_mask) {
+    if ((ps1->split[i] ^ ps2->split[i]) & split_mask) {
       return 0;
     }
   }
@@ -105,26 +101,34 @@ int compare_splits(int d, unsigned int *s1, int *ns1, unsigned int *s2, int *ns2
   return 1;
 }
 
-void split_to_interval(unsigned int split, int nsplit, double *x1, double *x2) {
-  /* Convert a univariate split to the real interval defined by the split.
+int split_to_interval(box_split *split, int dim, double *x1, double *x2) {
+  /* Extract the real interval associated with a split.
    *
    * Args:
-   *   split: the split.
-   *   nsplit: number of splits.
+   *   split: pointer to the split.
+   *   dim: which dimension to extract.
    *   x1: pointer to the left edge of the interval.
    *   x2: pointer to the right edge of the interval.
+   * Returns:
+   *   BOX_SUCCESS if split is succesfully converted, BOX_ERROR otherwise.
    */
   *x1 = 0;
   *x2 = 1;
   
-  for (int i = 0; i < nsplit; i++) {
+  if (!split || dim < 0 || dim > split->d) {
+    return BOX_ERROR;
+  }
+  
+  for (int i = 0; i < split->nsplit[dim]; i++) {
     double next_split = (*x1 + *x2) / 2;
-    if ((split & (1 << i)) == LEFT_SPLIT) {
+    if ((split->split[dim] & (1 << i)) == LEFT_SPLIT) {
       *x2 = next_split;
     } else {
       *x1 = next_split;
     }
   }
+  
+  return BOX_SUCCESS;
 }
 
 unsigned int point_to_split(double *px, int d, int k_max) {
@@ -179,15 +183,15 @@ box_collection *points_to_boxes(double *px, int n, int d, int k_max) {
    *   pointer to newly alloced box_collection. 
    */
   int i, j;
-  unsigned int splits[d];
-  int nsplits[d];
   double point[d];
   box *cur_box;
   box_collection *p_collection;
+  box_split *p_split = new_box_split(d);
 
   /* Initialized once, nsplits is constant in this function. */
-  for (j = 0; j < d; j++)
-    nsplits[j] = k_max;
+  for (j = 0; j < d; j++) {
+    p_split->nsplit[j] = k_max;
+  }
 
   p_collection = new_collection(d);
   
@@ -196,17 +200,19 @@ box_collection *points_to_boxes(double *px, int n, int d, int k_max) {
       point[j] = px[i + j * n];
     }
 
-    point_to_box(point, d, k_max, splits);
+    point_to_box(point, d, k_max, p_split->split);
 
-    cur_box = find_box(p_collection, splits, nsplits);
+    cur_box = find_box(p_collection, p_split);
     if (!cur_box) {
-      cur_box = new_box(d, splits, nsplits, 1 + (n - i) / 4);
+      cur_box = new_box(p_split, 1 + (n - i) / 4);
       add_box(p_collection, cur_box);
     }
 
     add_point(cur_box, i);
   }
   
+  free_box_split(p_split);
+
   return p_collection;
 }
 
@@ -220,14 +226,14 @@ int add_box(box_collection *pc, box *pb) {
    *   pc: pointer to collection.
    *   pb: pointer to box to add.
    * Returns:
-   *   1 if box is succesfully added, 0 otherwise.
+   *   BOX_SUCCESS if box is succesfully added, BOX_ERROR otherwise.
    */
   box_node *p_node;
 
   /* Don't add if one of the two pointers are NULL, or if this box is
    * already in the collection. */
-  if (!pc || !pb || find_box(pc, pb->splits, pb->nsplits)) {
-    return 0;
+  if (!pc || !pb || find_box(pc, pb->split)) {
+    return BOX_ERROR;
   }
   
   p_node = (box_node *)malloc(sizeof(box_node));
@@ -236,16 +242,15 @@ int add_box(box_collection *pc, box *pb) {
   pc->boxes = p_node;
   pc->n++;
   
-  return 1;
+  return BOX_SUCCESS;
 }
 
-box *find_box(box_collection *pc, unsigned int *splits, int *nsplits) {
+box *find_box(box_collection *pc, box_split *split) {
   /* Find a box in a collection that matches the given splits.
    *
    * Args:
    *   pc: pointer to box collection.
-   *   splits: pointer to splits for each dimension.
-   *   nsplits: pointer to number of splits in each dimension.
+   *   split: pointer to box_split to find.
    * Returns:
    *   Returns pointer to box that matches the given splits if one is found, 
    *   NULL otherwise.
@@ -253,8 +258,7 @@ box *find_box(box_collection *pc, unsigned int *splits, int *nsplits) {
   box_node *p_node = pc->boxes;
 
   while(p_node) {
-    if (compare_splits(pc->d, p_node->p->splits, p_node->p->nsplits, splits, 
-		       nsplits)) {
+    if (compare_splits(p_node->p->split, split)) { 
       return p_node->p;
     }
     p_node = p_node->next;
@@ -284,4 +288,79 @@ void free_collection(box_collection *p) {
   }
   
   free(p);
+}
+
+box_split *copy_box_split(box_split *split) {
+  /* Make a copy of a box_split.
+   *
+   * Args:
+   *   split: pointer to split to copy.
+   * Returns:
+   *   pointer to a copy of split.  NULL if split cannot be copied.
+   */
+  
+  if (!split) {
+    return NULL;
+  }
+
+  box_split *p = new_box_split(split->d);
+  
+  for (int i = 0; i < p->d; i++) {
+    p->nsplit[i] = split->nsplit[i];
+    p->split[i] = split->split[i];
+  }
+
+  return p;
+}
+
+int copy_box_split2(box_split *to, box_split *from) {
+  /* Copy box split from one split to another.
+   *
+   * Args:
+   *   to: pointer to destination split.
+   *   from: pointer to source split.
+   * Returns:
+   *   BOX_SUCCESS if copy was succesful, BOX_ERROR otherwise.
+   */
+  if (!pb || !ps || dim < 0 || dim > pb->split->d || ps->d != pb->split->d) {
+    return BOX_ERROR;
+  }
+  
+  for (int j = 0; j < pb->split->d; j++) {
+    ps->split[j] = pb->split->split[j];
+    ps->nsplit[j] = pb->split->nsplit[j];
+  }
+
+  return BOX_SUCCESS;
+}
+
+void free_box_split(box_split *p) {
+  /* Free the given box split. 
+   *
+   * Args:
+   *   p: pointer to the box_split to be freed.
+   */
+  if (!p) {
+    return;
+  }
+  
+  free(p->split);
+  free(p->nsplit);
+  free(p);
+}
+
+box_split *new_box_split(int d) {
+  /* Create a new box_split.
+   *
+   * Args: 
+   *   d: number of dimensions to use.
+   * Returns:
+   *   pointer to the new box split.
+   */
+  box_split *p = (box_split *)malloc(sizeof(box_split));
+  p->d = d;
+  p->nsplit = (int *)malloc(d * sizeof(int));
+  p->split = (unsigned int *)malloc(d * sizeof(unsigned int));
+  
+  return p;
 }

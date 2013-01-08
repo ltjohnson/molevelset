@@ -4,14 +4,20 @@
 #define MAX_SPLITS 31 
 #define LEFT_SPLIT 0
 #define RIGHT_SPLIT 1
+#define BOX_SUCCESS 1
+#define BOX_ERROR 0
 
 typedef struct {
-  int d;                 /* Number of dimensions */
-  int *nsplits;          /* Number of splits in each direction. */
-  unsigned int *splits;  /* Splits in each direction. */
-  int n;                 /* Number of points in this box. */
-  int *i;                /* Indexes of the points. */
-  int isize;             /* Size of i array. */
+  int d;                /* Number of dimensions */
+  int *nsplit;          /* Number of splits in each direction. */
+  unsigned int *split;  /* Split in each direction. */
+} box_split;
+
+typedef struct {
+  box_split *split; /* Split for this box. */
+  int n;            /* Number of points in this box. */
+  int *i;           /* Indexes of the points. */
+  int isize;        /* Size of i array. */
 } box;
 
 typedef struct box_node {
@@ -38,17 +44,21 @@ box_collection *points_to_boxes(double *px, int n, int d, int k_max);
 
 /* Functions for working with collections. */
 int add_box(box_collection *, box *);
-box *find_box(box_collection *, unsigned int *splits, int *nsplits);
+box *find_box(box_collection *, box_split *split);
 void free_collection(box_collection *);
 
-unsigned int point_to_split(double *px, int d, int k_max);
-void split_to_interval(unsigned int split, int nsplit, double *x1, double *x2);
-void point_to_box(double *px, int d, int k_max, unsigned int *pbox);
-int compare_splits(int d, unsigned int *s1, int *ns1, unsigned int *s2, int *ns2);
+int split_to_interval(box_split *split, int dim, double *x1, double *x2);
+int compare_splits(box_split *ps1, box_split *ps2);
+
+/* Functions for working with box_splits. */
+box_split * copy_box_split(box_split *split);
+int copy_box_split2(box_split *to, box_split *from);
+void free_box_split(box_split *split);
+box_split *new_box_split(int d);
 
 /* Functions for working with boxes. */
 void free_box(box *);
-box *new_box(int d, unsigned int *splits, int *nsplits, int size_guess);
+box *new_box(box_split *split, int size_guess);
 void add_point(box *, int);
 
 #endif
