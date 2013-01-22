@@ -2,7 +2,10 @@
 #include <math.h>
 
 #include "box.h"
+#include "molevelset.h"
 
+double inset_risk(box *p, double *y, double gamma, double A);
+double complexity_penalty(box *p, int n, double delta);
 
 int find_sibling(box *pb, box_split *ps, int dim) {
   /* Find the splits representing a sibling box.
@@ -19,7 +22,7 @@ int find_sibling(box *pb, box_split *ps, int dim) {
   }
   
   /* Flip the last bit in the requested dimension. */
-  ps->split[j] ^= 1 << pb->split->nsplit[j];
+  ps->split[dim] ^= 1 << ps->nsplit[dim];
   
   return BOX_SUCCESS;
 }
@@ -41,8 +44,8 @@ int find_parent(box *pb, box_split *ps, int dim) {
   
 }
 
-double inset_cost(box *p, double *y, int n, double gamma, double delta, 
-		  double rho, double A) {
+box_cost levelset_cost(box *p, double *y, int n, double gamma, double delta, 
+		       double rho, double A) {
   /* Calculate the inset cost for a box.
    *
    * Args:
@@ -54,9 +57,14 @@ double inset_cost(box *p, double *y, int n, double gamma, double delta,
    *  rho: double, complexity penalty multiplier.
    *  A: double, maximum absolute value of the response variable.
    * Returns:
-   *   double, cost of the box if it is in the set.
+   *   populated box_cost struct.
    */
-  return inset_risk(p, gamma, A) + rho * complexity_penalty(p, gamma, delta);
+  double risk = inset_risk(p, y, gamma, A);
+  double cost = rho * complexity_penalty(p, n, delta);
+  box_cost ret;
+  ret.inset = risk < 0;
+  ret.cost = (risk < 0 ? 1 : -1) * risk + cost;
+  return ret;
 }
 
 double inset_risk(box *p, double *y, double gamma, double A) {
@@ -92,11 +100,11 @@ double complexity_penalty(box *p, int n, double delta) {
    * Returns:
    *   double, complexity penalty for this box.
    */
-  double L = box->split->nsplit[0];
-  for (int j = 1; j < box->split->d; j++) {
-    L = box->split->nsplit[j] > L ? box->split->nsplit[j] : L;
+  int tree_level = 0; // The level of the tree := the sum of the number of splits.
+  for (int j = 0; j < p->split->d; j++) {
+    tree_level += p->split->nsplit[j];
   }
-  L = L * (log2(p->split->d) + 2) + 1;
+  double L = tree_level * (log2(p->split->d) + 2) + 1;
 
   double phat = ((double) p->n) / n;
   double pl = (L * log(2) + log(1 / delta)) / n;

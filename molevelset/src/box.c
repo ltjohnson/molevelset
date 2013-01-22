@@ -322,13 +322,13 @@ int copy_box_split2(box_split *to, box_split *from) {
    * Returns:
    *   BOX_SUCCESS if copy was succesful, BOX_ERROR otherwise.
    */
-  if (!pb || !ps || dim < 0 || dim > pb->split->d || ps->d != pb->split->d) {
+  if (!to || !from || to->d != from->d) {
     return BOX_ERROR;
   }
   
-  for (int j = 0; j < pb->split->d; j++) {
-    ps->split[j] = pb->split->split[j];
-    ps->nsplit[j] = pb->split->nsplit[j];
+  for (int j = 0; j < to->d; j++) {
+    to->split[j] = from->split[j];
+    to->nsplit[j] = from->nsplit[j];
   }
 
   return BOX_SUCCESS;

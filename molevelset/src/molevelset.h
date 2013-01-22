@@ -1,8 +1,11 @@
 #ifndef MOLEVELSET_H
 #define MOLEVELSET_H
 
-double inset_cost(box *p, double gamma, double delta, double rho, double A);
-double inset_risk(box *p, double gamma, double A);
-double complexity_penalty(box *p, double gamma, double delta);
+typedef struct {
+  int inset;   /* 1 for inset, 0 for not. */
+  double cost; /* cost for this box. */
+} box_cost;
+
+box_cost levelset_cost(box *p, double *y, int n, double gamma, double delta, double rho, double A);
 
 #endif
