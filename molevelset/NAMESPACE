@@ -1,3 +1,6 @@
+useDynLib(molevelset)
+
 import(hash)
 
 export(molevelset)
+export(GetBoxes)

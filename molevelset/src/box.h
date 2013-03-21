@@ -28,11 +28,11 @@ typedef struct box_node {
 /* Box collections are used at each level of the level set finding
  * algorithm.  Boxes would best be stored in a hash, but AFAIK there are no
  * good GPL hash implementations in C available.  We could probably use
- * something in STL in C++, but I haven't investigated how hard that is to
- * do in a cross-os R library.  Instead, we use a linked list.  Linked
- * lists are probably fast enough, most of the time there won't be that
- * many boxes (max of 2^(k_max * d)) so a linear search is probably
- * sufficient.
+ * something from STL in C++, but I haven't investigated how hard that is
+ * to do in a cross-platform R library.  Instead, we use a linked list.
+ * Linked lists are probably fast enough, most of the time there won't be
+ * that many boxes (max of 2^(k_max * d)) so a linear search is probably
+ * sufficient.  Patches welcome.
  */
 typedef struct {
   box_node *boxes;  /* Linked list of boxes. */

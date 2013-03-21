@@ -21,8 +21,18 @@ int find_sibling(box *pb, box_split *ps, int dim) {
     return BOX_ERROR;
   }
   
-  /* Flip the last bit in the requested dimension. */
-  ps->split[dim] ^= 1 << ps->nsplit[dim];
+  /* The sibling box comes from flipping the last split in the given
+   * dimension.  For example, suppose we are looking at the box, that in
+   * projected into this dimension, the box occupies the interval [0,
+   * 0.25).  This box would be reprsented by the splits (Left, Left) (in
+   * order).  Flipping the last split results in the splits (Left, Right)
+   * (also in order), which corresponds to the interval [0.25, 0.5).  Our
+   * internal representation can do this by XOR ing the bit in the last
+   * split position with 1.
+   */
+  if (ps->nsplit[dim]) {
+    ps->split[dim] ^= 1 << ps->nsplit[dim];
+  }
   
   return BOX_SUCCESS;
 }
@@ -37,11 +47,25 @@ int find_parent(box *pb, box_split *ps, int dim) {
    * Returns:
    *   BOX_SUCCESS if successfully calculated splits, BOX_ERROR otherwise.
    */
-  if (!pb || !ps || dim < 0 || dim > pb->split->d || ps->d != pb->split->d) {
+  if (dim < 0 || dim >= pb->split->d) {
+    return BOX_ERROR;
+  }
+
+  if (copy_box_split2(ps, pb->split) != BOX_SUCCESS) {
     return BOX_ERROR;
   }
   
+  /* A parent box is the one found by removing the last split in the given
+   * dimension.  Consider the box that occupies the interval [0.75, 0.875),
+   * which corresponds to the splits (Right, Right, Left).  The parent box,
+   * is defined by the splits (Right, Right), which is the interval [0.75,
+   * 1].  We can delete by decreasing the split counter for this dimension.
+   */ 
+  if (ps->nsplit[dim]) {
+    ps->nsplit[dim]--;
+  }
   
+  return BOX_SUCCESS;
 }
 
 box_cost levelset_cost(box *p, double *y, int n, double gamma, double delta, 
@@ -63,7 +87,9 @@ box_cost levelset_cost(box *p, double *y, int n, double gamma, double delta,
   double cost = rho * complexity_penalty(p, n, delta);
   box_cost ret;
   ret.inset = risk < 0;
-  ret.cost = (risk < 0 ? 1 : -1) * risk + cost;
+  ret.risk = (risk < 0 ? 1 : -1) * risk;
+  ret.cost = cost;
+  ret.risk_cost = ret.risk + ret.cost;
   return ret;
 }
 
@@ -100,7 +126,10 @@ double complexity_penalty(box *p, int n, double delta) {
    * Returns:
    *   double, complexity penalty for this box.
    */
-  int tree_level = 0; // The level of the tree := the sum of the number of splits.
+  /* The level of the tree is defined as the sum of the number of splits in
+   * each dimension. 
+   */
+  int tree_level = 0; 
   for (int j = 0; j < p->split->d; j++) {
     tree_level += p->split->nsplit[j];
   }
@@ -111,4 +140,22 @@ double complexity_penalty(box *p, int n, double delta) {
   pl = 4 * (pl > phat ? pl : phat);
   
   return sqrt((8 * (log(2 / delta) + L * log(2)) * pl) / n);
+}
+
+box_collection *compute_levelset(box_collection *pc, 
+				 double *y, 
+				 int n,
+				 int d,
+				 int kmax,
+				 double gamma,
+				 double delta, 
+				 double rho) {
+
+  double A = fabs(y[0]);
+  for (int i = 1; i < n; i++) {
+    double tmp = fabs(y[i]);
+    A = tmp > A ? tmp : A;
+  }
+
+
 }
