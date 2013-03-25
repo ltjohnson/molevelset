@@ -175,6 +175,7 @@ SEXP estimate_levelset(SEXP X, SEXP Y, SEXP k_max, SEXP gamma, SEXP delta,
   /* Bucket everything up into a box collection. */
   levelset_estimate le = compute_levelset(points_to_boxes(la.x, la.n, la.d, la.kmax),
 					  la);
+  Rprintf("got le\n");
 
   /* Make return list, has total cost, number of boxes left, a list for inset boxes, and a 
    * list for non-inset boxes. */

@@ -1,6 +1,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <R.h>
+#include <Rinternals.h>
+
 #include "box.h"
 
 /* Some private functions. */
@@ -9,6 +12,7 @@ void point_to_box(double *px, int d, int k_max, unsigned int *pbox);
 void copy_box_risk(box_risk *dst, box_risk *src);
 
 box *new_box(box_split *split, int size_guess) {
+  Rprintf("new_box(%p, %d)\n", (void *)split, size_guess);
   /* Create and initialize a new box. 
    *
    * Args:
@@ -40,6 +44,7 @@ box *new_box(box_split *split, int size_guess) {
 }
 
 box * copy_box(box *src) {
+  Rprintf("copy_box(%p)\n", (void *)src);
   /* Copy a box.
    *
    * Args:
@@ -66,6 +71,7 @@ box * copy_box(box *src) {
 }
 
 void free_box_but_not_children(box *p) {
+  Rprintf("copy_box_but_not_children(%p)\n", (void *)p);
   /* Free memory associated with a box.
    *
    * Args:
@@ -78,6 +84,7 @@ void free_box_but_not_children(box *p) {
 }
 
 void add_point(box *p, int i) {
+  Rprintf("add_point(%p, %d)\n", (void *)p, i);
   /* Add a point to a box. 
    *
    * Args:
@@ -101,6 +108,7 @@ void add_point(box *p, int i) {
 }
 
 int compare_splits(box_split *ps1, box_split *ps2) {
+  Rprintf("compare_splits(%p, %p)\n", (void *)ps1, (void *)ps2);
   /* Compare two sets of splits, return 0 if unequal, 1 if equal.
    *
    * Args:
@@ -138,6 +146,7 @@ int compare_splits(box_split *ps1, box_split *ps2) {
 }
 
 int split_to_interval(box_split *split, int dim, double *x1, double *x2) {
+  Rprintf("split_to_interval(%p, %d, %p, %p)\n", (void *)split, dim, (void*)x1, (void *)x2);
   /* Extract the real interval associated with a split.
    *
    * Args:
@@ -168,6 +177,7 @@ int split_to_interval(box_split *split, int dim, double *x1, double *x2) {
 }
 
 unsigned int point_to_split(double *px, int d, int k_max) {
+  Rprintf("point_to_split(%p, %d, %d)\n", (void *)px, d, k_max);
   double next_split = 0.5; 
   double divisor = 0.25;
   unsigned int split = 0;
@@ -184,6 +194,7 @@ unsigned int point_to_split(double *px, int d, int k_max) {
 }
 
 void point_to_box(double *px, int d, int k_max, unsigned int *pbox) {
+  Rprintf("point_to_box(%p, %d, %d, %p)\n", (void *)px, d, k_max, (void *)pbox);
   int i;
 
   for(i = 0; i < d; i++) {
@@ -192,6 +203,7 @@ void point_to_box(double *px, int d, int k_max, unsigned int *pbox) {
 }
 
 box_collection *new_box_collection(int d) {
+  Rprintf("new_box_collection(%d)\n", d);
   /* Create and intialize an empty collection of boxes.
    *
    * Args:
@@ -208,6 +220,7 @@ box_collection *new_box_collection(int d) {
 }
 
 box_collection *points_to_boxes(double *px, int n, int d, int k_max) {
+  Rprintf("points_to_boxes(%p, %d, %d, %d)\n", (void *)px, n, d, k_max);
   /* Put a collection of points into boxes.
    *
    * Args:
@@ -256,6 +269,7 @@ box_collection *points_to_boxes(double *px, int n, int d, int k_max) {
  * Functions for manipulating box collections.
  **************************************************************************/
 int add_box(box_collection *pc, box *pb) {
+  Rprintf("add_box(%p, %p)\n", (void *)pc, (void *)pb);
   /* Add a box to this collection.
    *
    * Args:
@@ -282,6 +296,7 @@ int add_box(box_collection *pc, box *pb) {
 }
 
 int remove_box(box_collection *pc, box_split *split) {
+  Rprintf("remove_box(%p, %p)\n", (void *)pc, (void *)split);
   /* Remove and delete the box with the specified split from the colection.
    *
    * Args:
@@ -320,6 +335,7 @@ int remove_box(box_collection *pc, box_split *split) {
 }
 
 box *find_box(box_collection *pc, box_split *split) {
+  Rprintf("find_box(%p, %p)\n", (void *)pc, (void *)split);
   /* Find a box in a collection that matches the given splits.
    *
    * Args:
@@ -342,6 +358,7 @@ box *find_box(box_collection *pc, box_split *split) {
 }
 
 box *find_box_sibling(box_collection *pc, box_split *ps, int dim) {
+  Rprintf("find_box_sibling(%p, %p, %d)\n", (void *)pc, (void *)ps, dim);
   /* Find the sibling of a box in a collection.
    *
    * Args:
@@ -366,6 +383,7 @@ box *find_box_sibling(box_collection *pc, box_split *ps, int dim) {
 }
 
 box **list_boxes(box_collection *src) {
+  Rprintf("list_boxes(%p)\n", (void *)src);
   /* Get an array listing the boxes in a collection.
    *
    * Args:
@@ -391,6 +409,7 @@ box **list_boxes(box_collection *src) {
 }
 
 box *get_first_box(box_collection *p) {
+  Rprintf("get_first_box(%p)\n", (void *)p);
   /* Get the first box from a collection.
    *
    * Args:
@@ -402,6 +421,7 @@ box *get_first_box(box_collection *p) {
 }
 
 void free_collection(box_collection *p) {
+  Rprintf("free_collection(%p)\n", (void *)p);
   /* Free a box collection, all boxes are free-ed.
    *
    * Args:
@@ -425,6 +445,7 @@ void free_collection(box_collection *p) {
 }
 
 box_split *copy_box_split(box_split *split) {
+  Rprintf("copy_box_split(%p)\n", (void *)split);
   /* Make a copy of a box_split.
    *
    * Args:
@@ -448,6 +469,7 @@ box_split *copy_box_split(box_split *split) {
 }
 
 int remove_split(box_split *split, int dim) {
+  Rprintf("remove_split(%p, %d)\n", (void *)split, dim);
   /* Remove the box split in the specified dimension. 
    * 
    * Args:
@@ -472,6 +494,7 @@ int remove_split(box_split *split, int dim) {
 }
 
 int copy_box_split2(box_split *to, box_split *from) {
+  Rprintf("copy_box_split2(%p, %p)\n", (void *)to, (void *)from);
   /* Copy box split from one split to another.
    *
    * Args:
@@ -493,6 +516,7 @@ int copy_box_split2(box_split *to, box_split *from) {
 }
 
 void free_box_split(box_split *p) {
+  Rprintf("free_box_split(%p)\n", (void *)p);
   /* Free the given box split. 
    *
    * Args:
@@ -508,6 +532,7 @@ void free_box_split(box_split *p) {
 }
 
 box_split *new_box_split(int d) {
+  Rprintf("new_box_split(%d)\n", d);
   /* Create a new box_split.
    *
    * Args: 
@@ -527,6 +552,7 @@ box_split *new_box_split(int d) {
  * Functions for manipulating box risks.
  */
 void copy_box_risk(box_risk *dst, box_risk *src) {
+  Rprintf("copy_box_risk(%p, %p)\n", (void *)dst, (void *)src);
   /* Copy a box_risk struct.
    *
    * Args:
@@ -541,6 +567,7 @@ void copy_box_risk(box_risk *dst, box_risk *src) {
 }
 
 box_node *_get_boxes(box *box, box_node *node) {
+  Rprintf("_get_boxes(%p, %p)\n", (void *)box, (void *)node);
   /* Recursively iterate on the tree contained in box. 
    * 
    * Args:
@@ -565,6 +592,7 @@ box_node *_get_boxes(box *box, box_node *node) {
 }
 
 box **get_terminal_boxes(box *p) {
+  Rprintf("get_terminal_boxes(%p)\n", (void *)p);
   /* Get an array containing copies of the terminal boxes in a collection.
    *
    * Args:
@@ -598,7 +626,9 @@ box **get_terminal_boxes(box *p) {
   ret[nboxes] = NULL;
   
   /* Free the temporary linked list. */
+  Rprintf("Freeing terminal_boxes\n");
   while (terminal_boxes) {
+    Rprintf("terminal_boxes = %p\n", (void *)terminal_boxes);
     tmp = terminal_boxes->next;
     free(terminal_boxes);
     terminal_boxes = tmp;
@@ -612,5 +642,4 @@ box **get_terminal_boxes(box *p) {
   }
 
   return ret;
-
 }

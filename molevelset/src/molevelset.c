@@ -1,15 +1,21 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include <R.h>
+#include <Rinternals.h>
+
 #include "box.h"
 #include "molevelset.h"
+
+
 
 box *combine_boxes(box *p1, box *p2, int dim, levelset_args *);
 double inset_risk(box *p, levelset_args *);
 double complexity_penalty(box *p, int n, double delta);
-levelset_estimate intialize_levelset_estimate(box *, levelset_args);
+levelset_estimate initialize_levelset_estimate(box *, levelset_args);
 
 double max_vector_fabs(double *y, int n) {
+  Rprintf("max_vector_fabs(%p, %d)\n", (void *)y, n);
   /* Compute the maximum absolute value of a vector.
    *
    * Args:
@@ -32,6 +38,7 @@ double max_vector_fabs(double *y, int n) {
 }
 
 int find_sibling(box *pb, box_split *ps, int dim) {
+  Rprintf("find_sibling(%p, %p, %d)\n", (void *)pb, (void *)ps, dim);
   /* Find the splits representing a sibling box.
    *
    * Args:
@@ -62,6 +69,7 @@ int find_sibling(box *pb, box_split *ps, int dim) {
 }
 
 int find_parent(box *pb, box_split *ps, int dim) {
+  Rprintf("find_parent(%p, %p, %d)\n", (void *)pb, (void *)ps, dim);
   /* Find the split representing the parent box. 
    *
    * Args:
@@ -93,6 +101,7 @@ int find_parent(box *pb, box_split *ps, int dim) {
 }
 
 box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la) {
+  Rprintf("combine_boxes(%p, %p, %d, %p)\n", (void *)p1, (void *)p2, dim, (void *)la);
   /* Combine two boxes. 
    *
    * Args:
@@ -132,8 +141,10 @@ box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la) {
     parent->terminal_box = 1;
     parent->risk = parent_risk;
   } else {
-    parent->terminal_box = 0;
+    parent->terminal_box   = 0;
     parent->risk.risk_cost = existing_risk_cost;
+    parent->children[0]    = p1;
+    parent->children[1]    = p2;
   }
   
   /* Return new box. */
@@ -141,6 +152,7 @@ box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la) {
 }
 
 box_risk levelset_cost(box *p, levelset_args *la) {
+  Rprintf("levelset_cost(%p, %p)\n", (void *)p, (void *)la);
   /* Calculate the inset cost for a box.
    *
    * Args:
@@ -160,6 +172,7 @@ box_risk levelset_cost(box *p, levelset_args *la) {
 }
 
 double inset_risk(box *p, levelset_args *la) {
+  Rprintf("inset_risk(%p, %p)\n", (void *)p, (void *)la);
   /* Calculate the inset risk for a box.
    *
    * Args:
@@ -182,6 +195,7 @@ double inset_risk(box *p, levelset_args *la) {
 }
 
 double complexity_penalty(box *p, int n, double delta) {
+  Rprintf("complexity_penalty(%p, %d, %f)\n", (void *)p, n, delta);
   /* Compute the complexity penalty for a box.
    *
    * Args:
@@ -208,6 +222,7 @@ double complexity_penalty(box *p, int n, double delta) {
 }
 
 box_collection *minimax_step(box_collection *src, levelset_args *la) {
+  Rprintf("minimax_step(%p, %p)\n", (void *)src, (void *)la);
   /* Perform one step of the algorithm.
    *
    * Args:
@@ -267,6 +282,7 @@ box_collection *minimax_step(box_collection *src, levelset_args *la) {
 
 
 levelset_estimate compute_levelset(box_collection *pinitial, levelset_args la) {
+  Rprintf("compute_levelset(%p, <la>)\n", (void *)pinitial);
   /* Compute the levelset for the boxes contained in *pinitial.
    *
    * Args:
@@ -291,8 +307,9 @@ levelset_estimate compute_levelset(box_collection *pinitial, levelset_args la) {
     pc[i] = minimax_step(pc[i - i], &la);
   }
   
-  levelset_estimate le  = intialize_levelset_estimate(get_first_box(pc[max_depth - 1]),
-						      la);
+  levelset_estimate le  = initialize_levelset_estimate(get_first_box(pc[max_depth - 1]),
+						       la);
+  Rprintf("got le\n");
   
   /* Cleanup.  Because we've copied the terminal nodes from the final tree
    * into an array, cleanup is very simple.  Each node still in memory is
@@ -304,7 +321,8 @@ levelset_estimate compute_levelset(box_collection *pinitial, levelset_args la) {
   return le;
 }
 
-levelset_estimate intialize_levelset_estimate(box *p, levelset_args la) {
+levelset_estimate initialize_levelset_estimate(box *p, levelset_args la) {
+  Rprintf("initialize_levelset_estimate(%p, <la>)\n", (void *)p);
   /* Convert a box and levelset_args into a levelset estimate.
    *
    * Args:
@@ -319,6 +337,7 @@ levelset_estimate intialize_levelset_estimate(box *p, levelset_args la) {
   le.la = la;
 
   box **pfinal = get_terminal_boxes(p);
+  Rprintf("got pfinal = %p\n", (void *)pfinal);
 
   le.num_inset = 0;
   le.num_non_inset = 0;
@@ -329,7 +348,9 @@ levelset_estimate intialize_levelset_estimate(box *p, levelset_args la) {
       le.num_inset++;
     else
       le.num_non_inset++;
+    i++;
   }
+  Rprintf("Counted %d inset and %d non_inset.\n", le.num_inset, le.num_non_inset);
 
   le.inset_boxes = (box **)malloc(sizeof(box *) * (le.num_inset + 1));
   le.non_inset_boxes = (box **)malloc(sizeof(box *) * (le.num_non_inset + 1));
@@ -341,6 +362,7 @@ levelset_estimate intialize_levelset_estimate(box *p, levelset_args la) {
       le.inset_boxes[i_inset++] = pfinal[i];
     else
       le.non_inset_boxes[i_non_inset++] = pfinal[i];
+    i++;
   }
   
   le.inset_boxes[i_inset] = NULL;
@@ -348,5 +370,6 @@ levelset_estimate intialize_levelset_estimate(box *p, levelset_args la) {
     
   free(pfinal);
   
+  Rprintf("Done initializing.\n");
   return(le);
 }
