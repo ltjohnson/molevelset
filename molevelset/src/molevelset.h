@@ -15,6 +15,15 @@ typedef struct {
   double rho;   /* Tree complexity penalty for levelset calculation. */
 } levelset_args;
 
+typedef struct {
+  double total_cost;     /* Total cost of the estimated levelset. */
+  levelset_args la;      /* Args used to estimate the levelset. */
+  int num_inset;         /* Number of final boxes in the levelset. */
+  box **inset_boxes;     /* NULL terminated array of boxes in the levelset. */
+  int num_non_inset;     /* Number of final boxes not in the levelset. */
+  box **non_inset_boxes; /* NULL terminated array of boxes not in the levelset. */
+} levelset_estimate;
+
 /* Compute the max value in a vector. */
 double max_vector_fabs(double *y, int n);
 
@@ -32,8 +41,7 @@ box_risk levelset_cost(box *, levelset_args *);
  *   pinitial: box collection.
  *   levelset_args: parametrs for the levelset.
  * Returns: 
- *   Pointer to null terminated array of boxes encoding the minimax
- *   optimal levelset.
+ *   A populated levelset_estimate struct.
  */
-box **compute_levelset(box_collection *pinitial, levelset_args);
+levelset_estimate compute_levelset(box_collection *pinitial, levelset_args);
 #endif

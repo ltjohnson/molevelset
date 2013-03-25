@@ -573,8 +573,10 @@ box **get_terminal_boxes(box_collection *pc) {
    *   Array containing pointers to copies of the terminal boxes in a 
    *   collection.
    */
-  if (!pc) 
-    return NULL;
+  box **ret = NULL;
+  if (!pc)
+    goto out;
+
   box_node *terminal_boxes = NULL;
   box_node *boxes = pc->boxes;
   while (boxes) {
@@ -589,9 +591,9 @@ box **get_terminal_boxes(box_collection *pc) {
   }
   
   if (!nboxes) 
-    return NULL;
+    goto out;
   
-  box **ret = (box **)malloc(sizeof(box *) * (nboxes + 1));
+  ret = (box **)malloc(sizeof(box *) * (nboxes + 1));
   tmp = terminal_boxes;
   for (int i = 0; i < nboxes; i++) {
     ret[i] = copy_box(tmp->p);
@@ -605,6 +607,14 @@ box **get_terminal_boxes(box_collection *pc) {
     free(terminal_boxes);
     terminal_boxes = tmp;
   }
+
+ out:
   
+  if (!ret) {
+    ret = (box **)malloc(sizeof(box *));
+    ret[0] = NULL;
+  }
+
   return ret;
+
 }

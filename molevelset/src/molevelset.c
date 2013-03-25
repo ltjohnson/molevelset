@@ -7,6 +7,7 @@
 box *combine_boxes(box *p1, box *p2, int dim, levelset_args *);
 double inset_risk(box *p, levelset_args *);
 double complexity_penalty(box *p, int n, double delta);
+levelset_estimate intialize_levelset_esitmate(box *, levelset_args);
 
 double max_vector_fabs(double *y, int n) {
   /* Compute the maximum absolute value of a vector.
@@ -265,7 +266,7 @@ box_collection *minimax_step(box_collection *src, levelset_args *la) {
 }
 
 
-box **compute_levelset(box_collection *pinitial, levelset_args la) {
+levelset_estimate compute_levelset(box_collection *pinitial, levelset_args la) {
   /* Compute the levelset for the boxes contained in *pinitial.
    *
    * Args:
@@ -273,7 +274,7 @@ box **compute_levelset(box_collection *pinitial, levelset_args la) {
    *     contained boxes will be freed.
    *   la: levelset_args, the parameter values for the levelset algorithm.
    * Returns:
-   *   NULL terminated array of the boxes that make up the levelset estimate.
+   *   levelset_estimate struct.
    */
   la.A = max_vector_fabs(la.y, la.n);
 
@@ -290,10 +291,9 @@ box **compute_levelset(box_collection *pinitial, levelset_args la) {
     pc[i] = minimax_step(pc[i - i], &la);
   }
   
-  /* pc[max_depth - 1] now contains one box which is the mini-max optimal
-     levelset. */
-  box **pfinal = get_terminal_boxes(pc[max_depth - 1]);
-
+  levelset_estimate le  = intialize_levelset_esitmate(get_first_box(pc[max_depth - 1]),
+						      la);
+  
   /* Cleanup.  Because we've copied the terminal nodes from the final tree
    * into an array, cleanup is very simple.  Each node still in memory is
    * contained in exactly one collection in pc.  So we just go through all
@@ -301,5 +301,52 @@ box **compute_levelset(box_collection *pinitial, levelset_args la) {
   for (int i = 0; i < max_depth; i++) 
     free_collection(pc[i]);
   
-  return pfinal;
+  return le;
+}
+
+levelset_estimate intialize_levelset_estimate(box *p, levelset_args la) {
+  /* Convert a box and levelset_args into a levelset estimate.
+   *
+   * Args:
+   *   box: pointer to box to convert.  Memory is not touched.
+   *   la: levelset args used to compute the levelset estimate.
+   * Returns:
+   *   levelset_estimate struct.
+   */
+  levelset_estimate le;
+
+  le.total_cost = p->risk.risk_cost;
+  le.la = la;
+
+  box **pfinal = get_terminal_boxes(p);
+
+  le.num_inset = 0;
+  le.num_non_inset = 0;
+  /* This takes two passes to copy out the boxes.  Could be better. */
+  int i = 0;
+  while (pfinal[i]) {
+    if (pfinal[i]->risk.inset)
+      le.num_inset++;
+    else
+      le.num_non_inset++;
+  }
+
+  le.inset_boxes = (box **)malloc(sizeof(box *) * (le.num_inset + 1));
+  le.non_inset_boxes = (box **)malloc(sizeof(box *) * (le.num_non_inset + 1));
+  int i_inset = 0;
+  int i_non_inset = 0;
+  i = 0;
+  while (pfinal[i]) {
+    if (pfinal[i]->risk.inset) 
+      le.inset_boxes[i_inset++] = pfinal[i];
+    else
+      le.non_inset_boxes[i_non_inset++] = pfinal[i];
+  }
+  
+  le.inset_boxes[i_inset] = NULL;
+  le.non_inset_boxes[i_non_inset] = NULL;
+    
+  free(pfinal);
+  
+  return(le);
 }
