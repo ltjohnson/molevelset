@@ -564,24 +564,20 @@ box_node *_get_boxes(box *box, box_node *node) {
   return ret;
 }
 
-box **get_terminal_boxes(box_collection *pc) {
+box **get_terminal_boxes(box *p) {
   /* Get an array containing copies of the terminal boxes in a collection.
    *
    * Args:
-   *   pc: pointer to box collection to get terminal nodes from. 
+   *   p: pointer to box to get terminal nodes from. 
    * Returns:
    *   Array containing pointers to copies of the terminal boxes in a 
    *   collection.
    */
   box **ret = NULL;
-  if (!pc)
+  if (!p)
     goto out;
 
-  box_node *terminal_boxes = NULL;
-  box_node *boxes = pc->boxes;
-  while (boxes) {
-    terminal_boxes = _get_boxes(boxes->p, terminal_boxes);
-  }
+  box_node *terminal_boxes = _get_boxes(p, NULL);
   
   int nboxes = 0;
   box_node *tmp = terminal_boxes;

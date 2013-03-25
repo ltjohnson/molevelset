@@ -7,7 +7,7 @@
 box *combine_boxes(box *p1, box *p2, int dim, levelset_args *);
 double inset_risk(box *p, levelset_args *);
 double complexity_penalty(box *p, int n, double delta);
-levelset_estimate intialize_levelset_esitmate(box *, levelset_args);
+levelset_estimate intialize_levelset_estimate(box *, levelset_args);
 
 double max_vector_fabs(double *y, int n) {
   /* Compute the maximum absolute value of a vector.
@@ -291,7 +291,7 @@ levelset_estimate compute_levelset(box_collection *pinitial, levelset_args la) {
     pc[i] = minimax_step(pc[i - i], &la);
   }
   
-  levelset_estimate le  = intialize_levelset_esitmate(get_first_box(pc[max_depth - 1]),
+  levelset_estimate le  = intialize_levelset_estimate(get_first_box(pc[max_depth - 1]),
 						      la);
   
   /* Cleanup.  Because we've copied the terminal nodes from the final tree

@@ -70,7 +70,7 @@ box *find_box_sibling(box_collection *, box_split *, int);
 void free_collection(box_collection *);
 box *get_first_box(box_collection *);
 int num_boxes_in_collection(box_collection *);
-box **get_terminal_boxes(box_collection *);
+box **get_terminal_boxes(box *);
 box **list_boxes(box_collection *src);
 
 int split_to_interval(box_split *split, int dim, double *x1, double *x2);

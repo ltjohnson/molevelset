@@ -7,7 +7,7 @@ typedef struct {
   int d;        /* Dimension of X points. */
   int kmax;     /* Max number of splits in a single dimension. */
   int n;        /* Number of points. */
-  double **x;   /* X points, location of the points. */
+  double *x;    /* X points, locations. */
   double *y;    /* Response value of points. */
   double A;     /* Maximum absolute value of points in y. */
   double gamma; /* Threshold for the levelset. */

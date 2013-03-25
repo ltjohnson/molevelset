@@ -4,7 +4,7 @@
 #include "box.h"
 #include "molevelset.h"
 
-SEXP box_to_list(box *p, double *px, int n);
+SEXP box_to_list(box *p);
 
 SEXP get_boxes(SEXP X, SEXP k_max) {
   SEXP ans, dim;
@@ -26,7 +26,7 @@ SEXP get_boxes(SEXP X, SEXP k_max) {
   PROTECT(ans = allocVector(VECSXP, pc->n));
   box_node *p_node = pc->boxes;
   for (int i = 0; i < pc->n; i++) {
-    SET_VECTOR_ELT(ans, i, box_to_list(p_node->p, REAL(X), INTEGER(dim)[1]));
+    SET_VECTOR_ELT(ans, i, box_to_list(p_node->p));
     p_node = p_node->next;
   }
   
@@ -37,7 +37,7 @@ SEXP get_boxes(SEXP X, SEXP k_max) {
   return ans;
 }
 
-SEXP box_to_list(box *p, double *px, int n) {
+SEXP box_to_list(box *p) {
   /* Convert a box to an R list.
    * 
    * Args:
@@ -47,40 +47,28 @@ SEXP box_to_list(box *p, double *px, int n) {
    * Returns:
    *   list containing: 
    *     'i' - indexes of points in the box (1-relative).
-   *     'X' - matrix of coordinates of points in the box.
    *     'box' - coordinates of the corners of the box.
    */
   SEXP box_list, box_list_names, box_i, box_X, box_splits, tmp_splits, 
     box_matrix;
 
-  PROTECT(box_list = allocVector(VECSXP, 4));
+  PROTECT(box_list = allocVector(VECSXP, 3));
 
-  PROTECT(box_list_names = allocVector(STRSXP, 4));
+  PROTECT(box_list_names = allocVector(STRSXP, 3));
   SET_STRING_ELT(box_list_names, 0, mkChar("i"));
-  SET_STRING_ELT(box_list_names, 1, mkChar("X"));
-  SET_STRING_ELT(box_list_names, 2, mkChar("splits"));
-  SET_STRING_ELT(box_list_names, 3, mkChar("box"));
+  SET_STRING_ELT(box_list_names, 1, mkChar("splits"));
+  SET_STRING_ELT(box_list_names, 2, mkChar("box"));
   Rf_namesgets(box_list, box_list_names);
   UNPROTECT(1);
 
   /* Copy the indexes of the points in this box to box$i. */
-  PROTECT(box_i = allocVector(INTSXP, p->n));
-  for (int i = 0; i < p->n; i++) {
-    INTEGER(box_i)[i] = p->i[i] + 1; /* Convert to 1-relative for R. */
+  PROTECT(box_i = allocVector(INTSXP, p->points.n));
+  for (int i = 0; i < p->points.n; i++) {
+    INTEGER(box_i)[i] = p->points.i[i] + 1; /* Convert to 1-relative for R. */
   }
   SET_VECTOR_ELT(box_list, 0, box_i);
   UNPROTECT(1);
   
-  /* Copy the points in this box to box$X. */
-  PROTECT(box_X = allocMatrix(REALSXP, p->n, p->split->d));
-  for (int i = 0; i < p->n; i++) {
-    for (int j = 0; j < p->split->d; j++) {
-      REAL(box_X)[i + j * p->n] = px[p->i[i] + j * n];
-    }
-  }
-  SET_VECTOR_ELT(box_list, 1, box_X);
-  UNPROTECT(1);
-
   /* Copy the splits that define this box to box$splits. */
   PROTECT(box_splits = allocVector(VECSXP, p->split->d));
   for (int i = 0; i < p->split->d; i++) {
@@ -94,7 +82,7 @@ SEXP box_to_list(box *p, double *px, int n) {
     }
     SET_VECTOR_ELT(box_splits, i, tmp_splits);
   }
-  SET_VECTOR_ELT(box_list, 2, box_splits);
+  SET_VECTOR_ELT(box_list, 1, box_splits);
   UNPROTECT(1 + p->split->d);
   
   /* Copy the lower-left and upper-right corners of this box to box$box. */
@@ -105,9 +93,29 @@ SEXP box_to_list(box *p, double *px, int n) {
     REAL(box_matrix)[j * 2] = x1;
     REAL(box_matrix)[j * 2 + 1] = x2;
   }
-  SET_VECTOR_ELT(box_list, 3, box_matrix);
+  SET_VECTOR_ELT(box_list, 2, box_matrix);
   UNPROTECT(1);
 
+  UNPROTECT(1);
+  return box_list;
+}
+
+SEXP get_boxes_list(box **p, int n) {
+  /* Convert an array of boxes into an R list of Boxes. 
+   *
+   * Args:
+   *   p: array of box pointers.
+   *   n: integer, length of array.
+   * Returns:
+   *   R list containing the converted boxes.
+   */
+  SEXP box_list;
+  PROTECT(box_list = allocVector(VECSXP, n));
+  
+  for (int i = 0; i < n; i++) {
+    SET_VECTOR_ELT(box_list, i, box_to_list(p[i]));
+  }
+  
   UNPROTECT(1);
   return box_list;
 }
@@ -140,58 +148,81 @@ SEXP estimate_levelset(SEXP X, SEXP Y, SEXP k_max, SEXP gamma, SEXP delta,
     error("rho must be a single numeric value.");
   }
 
-  int n, d;
+  levelset_args la;
   SEXP dim;
   
   PROTECT(dim = Rf_getAttrib(X, R_DimSymbol));
   if (LENGTH(dim) != 2) {
     error("X must be a 2 dimensional matrix.");
   }
-  n = INTEGER(dim)[0];
-  d = INTEGER(dim)[1];
+
+  la.n = INTEGER(dim)[0];
+  la.d = INTEGER(dim)[1];
   UNPROTECT(1);
   
-  if (TYPEOF(Y) != REALSXP || LENGTH(Y) != n) {
-    error("Y must be a vector with length(y) == dim(X)[1]");
+  if (TYPEOF(Y) != REALSXP || LENGTH(Y) != la.n) {
+    error("Y must be a vector with length(Y) == dim(X)[1]");
   }
   
-  /* Bucket everything up into a box collection. */
-  box_collection *pc = points_to_boxes(REAL(X), n, d, INTEGER(k_max)[0]);
-  
   /* Compute the levelset. */
-  levelset_args la;
-  la.d     = d;
   la.kmax  = INTEGER(k_max)[0];
-  la.n     = n;
   la.x     = REAL(X);
   la.y     = REAL(Y);
   la.gamma = REAL(gamma)[0];
   la.delta = REAL(delta)[0];
   la.rho   = REAL(rho)[0];
 
-  box **plevelset = 
-    compute_levelset(pc, REAL(Y), n, d, INTEGER(k_max)[0], REAL(gamma)[0], 
-		     REAL(delta)[0], REAL(rho)[0]);
-  if (!plevelset) 
-    return NULL;
-  
-  /* Convert the final level set estimation to R usable return value. */
-  int n_inset = 0;
-  int n_outset = 0;
-  int i = 0;
-  while (plevelset[i]) {
-    if (plevelset[i]->inset) {
-      n_inset++;
-    } else {
-      n_outset++;
-    }
-    i++;
-  }
-  
+  /* Bucket everything up into a box collection. */
+  levelset_estimate le = compute_levelset(points_to_boxes(la.x, la.n, la.d, la.kmax),
+					  la);
+
   /* Make return list, has total cost, number of boxes left, a list for inset boxes, and a 
    * list for non-inset boxes. */
+  SEXP ret, ret_names;
+  PROTECT(ret = allocVector(VECSXP, 4));
+  PROTECT(ret_names = allocVector(STRSXP, 4));
+
+  SET_STRING_ELT(ret_names, 0, mkChar("total_cost"));
+  SEXP total_cost;
+  PROTECT(total_cost = Rf_allocVector(REALSXP, 1));
+  REAL(total_cost)[0] = le.total_cost;
+  SET_VECTOR_ELT(ret, 0, total_cost);
+  UNPROTECT(1);
   
+  SET_STRING_ELT(ret_names, 1, mkChar("num_boxes"));
+  SEXP num_boxes;
+  PROTECT(num_boxes = Rf_allocVector(REALSXP, 1));
+  REAL(num_boxes)[0] = le.num_inset + le.num_non_inset;
+  SET_VECTOR_ELT(ret, 1, num_boxes);
+  UNPROTECT(1);
+  
+  SET_STRING_ELT(ret_names, 2, mkChar("inset_boxes"));
+  SEXP inset_boxes;
+  PROTECT(inset_boxes = get_boxes_list(le.inset_boxes, le.num_inset));
+  SET_VECTOR_ELT(ret, 2, inset_boxes);
+  UNPROTECT(1);
+  
+  SET_STRING_ELT(ret_names, 3, mkChar("non_inset_boxes"));
+  SEXP non_inset_boxes;
+  PROTECT(non_inset_boxes = get_boxes_list(le.non_inset_boxes, le.num_non_inset));
+  SET_VECTOR_ELT(ret, 3, non_inset_boxes);
+  UNPROTECT(1);
+  
+  Rf_namesgets(ret, ret_names);
+  UNPROTECT(2);
+
   /* Cleanup. */
+  for (int i = 0; i < le.num_inset; i++) {
+    /* By definition, these boxes do not have children. */
+    free_box_but_not_children(le.inset_boxes[i]);
+  }
+  free(le.inset_boxes);
   
-  return NULL;
+  for (int i = 0; i < le.num_non_inset; i++) {
+    /* By definition, these boxes do not have children. */
+    free_box_but_not_children(le.non_inset_boxes[i]);
+  }
+  free(le.non_inset_boxes);
+  
+  return ret;
 }
