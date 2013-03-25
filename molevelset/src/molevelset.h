@@ -4,11 +4,19 @@
 #include "box.h"
 
 typedef struct {
-  int inset;        /* 1 for inset, 0 for not. */
-  double risk;      /* Risk associated with this box. */
-  double cost;      /* cost for this box. */
-  double risk_cost; /* risk + cost for this box. */
-} box_cost;
+  int d;        /* Dimension of X points. */
+  int kmax;     /* Max number of splits in a single dimension. */
+  int n;        /* Number of points. */
+  double **x;   /* X points, location of the points. */
+  double *y;    /* Response value of points. */
+  double A;     /* Maximum absolute value of points in y. */
+  double gamma; /* Threshold for the levelset. */
+  double delta; /* Probability bound for the levelset calculation. */
+  double rho;   /* Tree complexity penalty for levelset calculation. */
+} levelset_args;
+
+/* Compute the max value in a vector. */
+double max_vector_fabs(double *y, int n);
 
 /* levelset_cost calculates the box_cost for the given box.  This box_cost
  * is based on a complexity penalty (a function of delta, the number of
@@ -16,21 +24,16 @@ typedef struct {
  * function of the gamma, A, and the y values for the points in the
  * box. 
  */
-box_cost levelset_cost(box *p, double *y, int n, double gamma, double delta, 
-		       double rho, double A);
+box_risk levelset_cost(box *, levelset_args *);
 
 /* Computes the levelset for a box collection.  
  *
- * pc: box collection .
- * y: double *, array of response values, has length n.
- * n: integer, number of points.
- * d: integer, number of dimensions.
- * kmax: integer, maximum number of splits.
- * gamma: double, threshold for the levelset.
- * delta: double, SOMETHING SOMETHING SOMETHING.
- * rho: double, SOMETHING SOMETHING SOMETHING.
+ * Args:
+ *   pinitial: box collection.
+ *   levelset_args: parametrs for the levelset.
+ * Returns: 
+ *   Pointer to null terminated array of boxes encoding the minimax
+ *   optimal levelset.
  */
-box_collection *compute_levelset(box_collection *pc, double *y, int n, 
-				 int d, int kmax,  double gamma, double delta, 
-				 double rho);
+box **compute_levelset(box_collection *pinitial, levelset_args);
 #endif

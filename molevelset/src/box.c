@@ -1,10 +1,12 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "box.h"
 
 /* Some private functions. */
 unsigned int point_to_split(double *px, int d, int k_max);
 void point_to_box(double *px, int d, int k_max, unsigned int *pbox);
+void copy_box_risk(box_risk *dst, box_risk *src);
 
 box *new_box(box_split *split, int size_guess) {
   /* Create and initialize a new box. 
@@ -24,21 +26,54 @@ box *new_box(box_split *split, int size_guess) {
   
   p = (box *)malloc(sizeof(box));
   p->split = copy_box_split(split);
-  p->n = 0;
-  p->isize = size_guess;
-  p->i = (int *)malloc(sizeof(int) * size_guess);
 
+  p->checked = (int *)malloc(sizeof(int) * p->split->d);
+  memset(p->checked, 0, sizeof(int) * p->split->d);
+
+  p->points.n = 0;
+  p->points.isize = size_guess;
+  p->points.i = (int *)malloc(sizeof(int) * size_guess);
+
+  p->risk.calculated = 0;
+  
   return p;
 }
 
-void free_box(box *p) {
+box * copy_box(box *src) {
+  /* Copy a box.
+   *
+   * Args:
+   *   src: pointer to the box to copy.
+   *
+   * Returns:
+   *   pointer to the new box.
+   */
+  box *dst = (box *)malloc(sizeof(box));
+  dst->split = copy_box_split(src->split);
+
+  dst->points.n = src->points.n;
+
+  dst->points.isize = src->points.isize;
+  dst->points.i = (int *)malloc(sizeof(int) * dst->points.isize);
+  memcpy(dst->points.i, src->points.i, sizeof(int) * dst->points.isize);
+
+  dst->checked = (int *)malloc(sizeof(int) * dst->split->d);
+  memcpy(dst->checked, src->checked, sizeof(int) * dst->split->d);
+  
+  copy_box_risk(&dst->risk, &src->risk);
+
+  return dst;
+}
+
+void free_box_but_not_children(box *p) {
   /* Free memory associated with a box.
    *
    * Args:
    *   p: pointer to box to free.
    */
   free_box_split(p->split);
-  free(p->i);
+  free(p->checked);
+  free(p->points.i);
   free(p);
 }
 
@@ -49,19 +84,20 @@ void add_point(box *p, int i) {
    *   p: pointer to box.
    *   i: index of point to add.
    */
-  if (p->n >= p->isize) {
+  box_points *points = &p->points;
+  if (points->n >= points->isize) {
     /* Increase size of array. */
     int j, new_size, *new_array;
-    new_size = p->isize > 0 ? 2 * p->isize : 1;
+    new_size = points->isize > 0 ? 2 * points->isize : 1;
     new_array = (int *)malloc(sizeof(int) * new_size);
-    for (j = 0; j < p->n; j++) 
-      new_array[j] = p->i[j];
-    if (p->i)
-      free(p->i);
-    p->i = new_array;
+    for (j = 0; j < points->n; j++) 
+      new_array[j] = points->i[j];
+    if (points->i)
+      free(points->i);
+    points->i = new_array;
   }
 
-  p->i[p->n++] = i;
+  points->i[points->n++] = i;
 }
 
 int compare_splits(box_split *ps1, box_split *ps2) {
@@ -155,7 +191,7 @@ void point_to_box(double *px, int d, int k_max, unsigned int *pbox) {
   }
 }
 
-box_collection *new_collection(int d) {
+box_collection *new_box_collection(int d) {
   /* Create and intialize an empty collection of boxes.
    *
    * Args:
@@ -193,7 +229,7 @@ box_collection *points_to_boxes(double *px, int n, int d, int k_max) {
     p_split->nsplit[j] = k_max;
   }
 
-  p_collection = new_collection(d);
+  p_collection = new_box_collection(d);
   
   for(i = 0; i < n; i++) {
     for(j = 0; j < d; j++) {
@@ -245,6 +281,44 @@ int add_box(box_collection *pc, box *pb) {
   return BOX_SUCCESS;
 }
 
+int remove_box(box_collection *pc, box_split *split) {
+  /* Remove and delete the box with the specified split from the colection.
+   *
+   * Args:
+   *   pc: pointer to box collection.
+   *   split: pointer to box_split to find.
+   * Returns:
+   *   BOX_SUCCESS if box is succesfully removed or is not in the
+   *   collection, BOX_ERROR otherwise.
+   */
+  box_node *node = pc->boxes;
+  box_node *last = NULL;
+  while (node) {
+    if (compare_splits(node->p->split, split)) {
+      break;
+    } else {
+      last = node;
+      node = node->next;
+    }
+  }
+  
+  if (!node) {
+    return BOX_SUCCESS;
+  }
+  
+  /* Remove the node from the linked list. */
+  if (last) {
+    last->next = node->next;
+  } else {
+    pc->boxes = node->next;
+  }
+  
+  free_box_but_not_children(node->p);
+  free(node);
+  
+  return BOX_SUCCESS;
+}
+
 box *find_box(box_collection *pc, box_split *split) {
   /* Find a box in a collection that matches the given splits.
    *
@@ -267,6 +341,66 @@ box *find_box(box_collection *pc, box_split *split) {
   return NULL;
 }
 
+box *find_box_sibling(box_collection *pc, box_split *ps, int dim) {
+  /* Find the sibling of a box in a collection.
+   *
+   * Args:
+   *   pc: pointer to box collection.
+   *   ps: pointer to box_split to find.
+   *   dim: integer, which dimension to change.
+   * Returns:
+   *   Returns pointer to box that matches the input split, with the last split 
+   *   in the given direction reversed.  NULL if there are no splits in that direction or 
+   *   the box isn't found.
+   */
+  if (!pc || !ps || !ps->nsplit[dim]) {
+    return NULL;
+  }
+  
+  box_split *s = copy_box_split(ps);
+  s->split[dim] ^= (1 << dim);
+  box *sib = find_box(pc, s);
+  free_box_split(s);
+
+  return sib;
+}
+
+box **list_boxes(box_collection *src) {
+  /* Get an array listing the boxes in a collection.
+   *
+   * Args:
+   *  src: box_collection pointer to access.
+   * Returns:
+   *  pointer to the array containing the boxes, NULL terminated;
+   */
+  if (!src)
+    return NULL;
+  box **arr = (box **)malloc(sizeof(box *) * (src->n + 1));
+
+  box_node *node = src->boxes;
+  int i = 0;
+
+  while (i < src->n) {
+    arr[i++] = node->p;
+    node = node->next;
+  }
+  
+  arr[i] = NULL;
+
+  return arr;
+}
+
+box *get_first_box(box_collection *p) {
+  /* Get the first box from a collection.
+   *
+   * Args:
+   *   p: box_collection pointer, collection to access.
+   * Returns:
+   *   pointer to the box, or NULL.
+   */
+  return p->n ? p->boxes->p : NULL;
+}
+
 void free_collection(box_collection *p) {
   /* Free a box collection, all boxes are free-ed.
    *
@@ -282,7 +416,7 @@ void free_collection(box_collection *p) {
   p_node = p->boxes;
   while (p_node) {
     tmp = p_node->next;
-    free_box(p_node->p);
+    free_box_but_not_children(p_node->p);
     free(p_node);
     p_node = tmp;
   }
@@ -311,6 +445,30 @@ box_split *copy_box_split(box_split *split) {
   }
 
   return p;
+}
+
+int remove_split(box_split *split, int dim) {
+  /* Remove the box split in the specified dimension. 
+   * 
+   * Args:
+   *   split: pointer to box_split to remove.
+   *   dim: integer, dimension to remove split from.
+   * Returns:
+   *   BOX_SUCCESS if split is successfull removed, BOX_ERROR otherwise.
+   */
+  if (!split)
+    return BOX_ERROR;
+  
+  if (!split->nsplit[dim]) 
+    return BOX_SUCCESS;
+  
+  unsigned int split_mask = 0;
+  for (int i = 0; i < split->nsplit[dim] - 1; i++) 
+    split_mask |= (1 << i);
+  split->split[dim] &= split_mask;
+  split->nsplit[dim]--;
+  
+  return BOX_SUCCESS;
 }
 
 int copy_box_split2(box_split *to, box_split *from) {
@@ -363,4 +521,90 @@ box_split *new_box_split(int d) {
   p->split = (unsigned int *)malloc(d * sizeof(unsigned int));
   
   return p;
+}
+
+/**************************************************************************
+ * Functions for manipulating box risks.
+ */
+void copy_box_risk(box_risk *dst, box_risk *src) {
+  /* Copy a box_risk struct.
+   *
+   * Args:
+   *   dst: pointer to destination box_risk.
+   *   src: pointer to source box_risk.
+   * Returns:
+   *   nothing.
+   */
+  /* Since box_risk doesn't contain any dynamic allocations, we can use
+     memcpy. */
+  memcpy(dst, src, sizeof(box_risk));
+}
+
+box_node *_get_boxes(box *box, box_node *node) {
+  /* Recursively iterate on the tree contained in box. 
+   * 
+   * Args:
+   *   box: pointer to box.
+   *   box_node: pointer to node linked list, may be null.
+   * Returns:
+   *   Pointer to box_node containing the linked list of terminal boxes.
+   */
+  if (!box)
+    return node;
+
+  if (box->terminal_box) {
+    box_node *tmp  = (box_node *)malloc(sizeof(box_node));
+    tmp->p         = box;
+    tmp->next      = node;
+    return tmp;
+  }
+  box_node *ret = _get_boxes(box->children[0], node);
+  ret = _get_boxes(box->children[1], ret);
+  
+  return ret;
+}
+
+box **get_terminal_boxes(box_collection *pc) {
+  /* Get an array containing copies of the terminal boxes in a collection.
+   *
+   * Args:
+   *   pc: pointer to box collection to get terminal nodes from. 
+   * Returns:
+   *   Array containing pointers to copies of the terminal boxes in a 
+   *   collection.
+   */
+  if (!pc) 
+    return NULL;
+  box_node *terminal_boxes = NULL;
+  box_node *boxes = pc->boxes;
+  while (boxes) {
+    terminal_boxes = _get_boxes(boxes->p, terminal_boxes);
+  }
+  
+  int nboxes = 0;
+  box_node *tmp = terminal_boxes;
+  while (tmp) {
+    nboxes++;
+    tmp = tmp->next;
+  }
+  
+  if (!nboxes) 
+    return NULL;
+  
+  box **ret = (box **)malloc(sizeof(box *) * (nboxes + 1));
+  tmp = terminal_boxes;
+  for (int i = 0; i < nboxes; i++) {
+    ret[i] = copy_box(tmp->p);
+    tmp = tmp->next;
+  }
+  ret[nboxes] = NULL;
+  
+  /* Free the temporary linked list. */
+  while (terminal_boxes) {
+    tmp = terminal_boxes->next;
+    free(terminal_boxes);
+    terminal_boxes = tmp;
+  }
+  
+  return ret;
 }

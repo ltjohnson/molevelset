@@ -159,11 +159,37 @@ SEXP estimate_levelset(SEXP X, SEXP Y, SEXP k_max, SEXP gamma, SEXP delta,
   box_collection *pc = points_to_boxes(REAL(X), n, d, INTEGER(k_max)[0]);
   
   /* Compute the levelset. */
-  box_collection *plevelset = 
+  levelset_args la;
+  la.d     = d;
+  la.kmax  = INTEGER(k_max)[0];
+  la.n     = n;
+  la.x     = REAL(X);
+  la.y     = REAL(Y);
+  la.gamma = REAL(gamma)[0];
+  la.delta = REAL(delta)[0];
+  la.rho   = REAL(rho)[0];
+
+  box **plevelset = 
     compute_levelset(pc, REAL(Y), n, d, INTEGER(k_max)[0], REAL(gamma)[0], 
 		     REAL(delta)[0], REAL(rho)[0]);
+  if (!plevelset) 
+    return NULL;
   
   /* Convert the final level set estimation to R usable return value. */
+  int n_inset = 0;
+  int n_outset = 0;
+  int i = 0;
+  while (plevelset[i]) {
+    if (plevelset[i]->inset) {
+      n_inset++;
+    } else {
+      n_outset++;
+    }
+    i++;
+  }
+  
+  /* Make return list, has total cost, number of boxes left, a list for inset boxes, and a 
+   * list for non-inset boxes. */
   
   /* Cleanup. */
   
