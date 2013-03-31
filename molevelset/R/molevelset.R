@@ -41,7 +41,7 @@ listboxes <- function(box) {
   c(sapply(box$box, splittobox), ifelse(box$inset, 1, 0))  
 }
 
-molevelset <- function(X, Y=NULL, gamma=0.5, kmax=3, rho=0.01) {
+.molevelset <- function(X, Y=NULL, gamma=0.5, kmax=3, rho=0.01) {
   # some constants needed below
   delta <- 0.05
   if (is.null(Y)) {

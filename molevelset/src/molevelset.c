@@ -147,7 +147,7 @@ box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la) {
   box_risk parent_risk = levelset_cost(parent, la);
   double existing_risk_cost = 
     p1->risk.risk_cost + (p2 ? p2->risk.risk_cost : 0);
-  if (parent_risk.risk_cost <= existing_risk_cost) {
+  if (parent_risk.risk_cost < existing_risk_cost) {
     parent->terminal_box = 1;
     parent->risk = parent_risk;
   } else {

@@ -3,5 +3,6 @@ useDynLib(molevelset)
 import(hash)
 
 export(molevelset)
-export(GetBoxes)
-export(EstimateLevelset)
+export(box.points)
+export(plot.molevelset)
+
