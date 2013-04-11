@@ -1,85 +1,92 @@
-#ifndef BOX_H
-#define BOX_H
+#ifndef box_h
+#define box_h
 
-#include <vector>
-#include <string>
-#include <map>
+#define MAX_SPLITS 31 
+#define LEFT_SPLIT 0
+#define RIGHT_SPLIT 1
+#define BOX_SUCCESS 1
+#define BOX_ERROR 0
 
-using namespace std;
+typedef struct {
+  int d;                /* Number of dimensions */
+  int *nsplit;          /* Number of splits in each direction. */
+  unsigned int *split;  /* Split in each direction. */
+} box_split;
 
-/* Using left = 1 and right = 2 for compatibility with the reference paper.
-   Adding stop = 0 for convenience. */
-enum BoxSplit { STOP_SPLIT = 0, LEFT_SPLIT = 1, RIGHT_SPLIT = 2};
+typedef struct {
+  int calculated;       /* Indicates if the risk components for this box
+                           have been calculated. */
+  int inset;            /* Is this box inside the set. */
+  double inset_risk;    /* The inset risk for this box. */    
+  double cost;          /* The cost for this box. */
+  double risk_cost;     /* risk + cost for this box. */
+} box_risk;
 
-/* Convenience structs.  Several MOBox functions return a double, int pair */
-typedef struct { double risk; int inset; } MORisk;
-typedef struct { double cost; int inset; } MOCost;
+typedef struct {
+  int n;             /* Number of points in this box. */
+  int *i;            /* Indexes of the points. */
+  int isize;         /* Size of i array. */
+} box_points;
 
-/***************************************************************************
- * Class to manage boxes in the [0,1]^d cube.  
- * 
- * Boxes contain between 0 and n points.  These points have x values in 
- * [0,1]^d and real y values.  Boxes are formed by bisecting [0,1] up to 
- * kmax times in each of the d dimensions, and chosing either the left or
- * right splits (halves).  Thus [0,1]^d may be divided into at most 
- * 2**(d * kmax) boxes, or as few as 1 boxes (no splits).  For example, if 
- * d=2, and kmax=2, the box with corners at the points (0.25, 0.75) and 
- * (0.5, 1.0) would be described by the splits [ [LEFT_SPLIT, RIGHT_SPLIT], 
- * [RIGHT_SPLIT, RIGHT_SPLIT]]
+typedef struct box {
+  box_split *split;  /* Split for this box. */
+  int *checked;      /* Has collapsing a split in this dimension been
+			checked. */
+  box_points points; /* Points for this box. */
+  int terminal_box;  /* Is this a terminal box, or does it have children
+			boxes?. */
+  struct box *children[2];  /* Children boxes. */
+  box_risk risk;     /* Contains the risk information for this box. */
+} box;
+
+typedef struct box_node {
+  box *p;
+  struct box_node *next;
+} box_node;
+
+/* Box collections are used at each level of the level set finding
+ * algorithm.  Boxes would best be stored in a hash, but AFAIK there are no
+ * good GPL hash implementations in C available.  We could probably use
+ * something from STL in C++, but I haven't investigated how hard that is
+ * to do in a cross-platform R library.  Instead, we use a linked list.
+ * Linked lists are probably fast enough, most of the time there won't be
+ * that many boxes (max of 2^(k_max * d)) so a linear search is probably
+ * sufficient.  Patches welcome.
  */
-class MOBox {
-  private:
-    vector<int> pointsIndex, checked;
-    vector<MOBox *> children;
-    double *py, *px;
-    double A;
-    int dim, kmax, n, nbox, terminalNode;
-    vector< vector<BoxSplit> > splits;
-  public:
-    /* Args:
-     *   kmax: maximum numbe of splits.
-     *   dim:  dimension of x.
-     *   n: number of points.
-     *   px: pointer to x points, array of length n*d, column-major format.
-     *   py: pointer to y points, array of length n.
-     *   splits: vector of vector of BoxSplit.  Gives the splits for 
-     *     this box.
-     */
-    MOBox(int kmax, int dim, int n, double *px, double *py, 
-          vector< vector<BoxSplit> > splits);
+typedef struct {
+  box_node *boxes;  /* Linked list of boxes. */
+  int n;            /* Number of boxes. */
+  int d;            /* Number of dimensions. */
+} box_collection;
 
-    /* Adds the point with index i to this box. */
-    void AddPoint(int i);
-    void AddPoint(vector<int>);
-    /* Return vector of point indicies. */
-    vector<int> GetPoints();
+box_collection *points_to_boxes(double *px, int n, int d, int k_max);
 
-    /* Check whether the collapsing the split in dimension i has been
-       checked. */
-    int GetChecked(int);
-    /* Mark dimension i as checked. */
-    void SetChecked(int);
+/* Functions for working with collections. */
+box_collection *new_box_collection(int);
+int add_box(box_collection *, box *);
+int remove_box(box_collection *, box_split *split);
+box *find_box(box_collection *, box_split *split);
+box *find_box_sibling(box_collection *, box_split *, int);
+void free_collection(box_collection *);
+box *get_first_box(box_collection *);
+int num_boxes_in_collection(box_collection *);
+box **get_terminal_boxes(box *);
+box **list_boxes(box_collection *src);
 
-    /* Compute the complexity of this box, up to the probability 1-delta. */
-    double Phi(double delta);
-    /* Compute the empirical risk for this box for the level gamma. */
-    MORisk Risk(double gamma);
-    /* Compute the cost of this box, using level gamma, probability
-       1-delta, and complexity penalty rho. */
-    MOCost Cost(double gamma, double delta, double rho);
-    
-    /* Add a children to this box, order doesn't matter */
-    void SetChildren(MOBox *, MOBox *);
-    vector<MOBox *> GetChildren();
+int split_to_interval(box_split *split, int dim, double *x1, double *x2);
+int compare_splits(box_split *ps1, box_split *ps2);
 
-    string GetBoxKey();
-    static string GetBoxKey(vector< vector<BoxSplit> >);
-    string GetSiblingKey(int);
-    vector<vector<BoxSplit> > GetSiblingSplits(int);
-    string GetParentKey(int);
-  
-    /* Create the parent box containing this box by dropping split i */
-    MOBox *CreateParentBox(int);
-};
+/* Functions for working with box_splits. */
+box_split * copy_box_split(box_split *split);
+int remove_split(box_split *split, int dim);
+int copy_box_split2(box_split *to, box_split *from);
+void free_box_split(box_split *split);
+box_split *new_box_split(int d);
+
+/* Functions for working with boxes. */
+void free_box_but_not_children(box *);
+box *new_box(box_split *split, int size_guess);
+void add_point(box *, int);
+box *copy_box(box *);
 
 #endif

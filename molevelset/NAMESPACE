@@ -1,6 +1,10 @@
+useDynLib(molevelset)
+
 import(hash)
 
 useDynLib(molevelset)
 
 export(molevelset)
-export(molevelsetCVersion)
+export(box.points)
+export(plot.molevelset)
+
