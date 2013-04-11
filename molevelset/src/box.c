@@ -523,11 +523,62 @@ box_split *new_box_split(int d) {
    *   pointer to the new box split.
    */
   box_split *p = (box_split *)malloc(sizeof(box_split));
-  p->d = d;
+
+  p->d      = d;
   p->nsplit = (int *)malloc(d * sizeof(int));
-  p->split = (unsigned int *)malloc(d * sizeof(unsigned int));
+  p->split  = (unsigned int *)malloc(d * sizeof(unsigned int));
+  p->key    = NULL;
   
   return p;
+}
+
+void *box_split_key(box_split *p, int kmax) {
+  /* Return a pointer to a new box_split_key.
+   * 
+   * Args:
+   *  p: pointer to box split to convert.
+   *  kmax: integer, max number of splits in any dimension.
+   */
+  if (!p)
+    return NULL;
+  int total_max_splits = kmax * p->d;
+  void *key = NULL;
+  if (total_max_splits <= sizeof(unsigned int) * CHAR_BIT) {
+    /* We can encode all of the splits inside of an unsigned long long. */
+    unsigned long long encoded = 0;
+    int shift = 0;
+    /* First encode the number of splits. */
+    for (int i = 0; i < p->d; i++) {
+      encoded |= split[i] << shift;
+      shift += kmax;
+    }
+
+    /* Now encode the splits in each direction. */
+    for (int i = 0; i < p->d; i++) {
+      /* If we guaranteed a set state for the unused split bits, we 
+       * wouldn't need this inner loop. */
+      encoded |= 
+	(p->split.split[i] & ((1 << p->split.nsplit[i]) - 1)) << shift;
+      shift += kmax;
+    }
+    
+    unsigned long long *pkey = 
+      (unsigned long long *)malloc(sizeof(unsigned long long));
+    *pkey = encoded;
+
+    key = (void *)pkey;
+  } else {
+    /* Time to give up and encode it as a string. */
+    string *pstring = new string;
+    
+    for (int i = 0; i < p->d; i++) {
+      *pstring << (p->split.split[i] & (1 << p->split.nsplit[i])) << " ";
+    }
+
+    key = (void *)pstring;
+  }
+  
+  return key;
 }
 
 box_node *_get_boxes(box *box, box_node *node) {

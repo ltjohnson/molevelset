@@ -8,9 +8,15 @@
 #define BOX_ERROR 0
 
 typedef struct {
+  int is_string; /* 1 if this key is a std::string.  0 ow. */
+  void *key;     /* Pointer to key. */
+} box_split_key;
+
+typedef struct {
   int d;                /* Number of dimensions */
   int *nsplit;          /* Number of splits in each direction. */
   unsigned int *split;  /* Split in each direction. */
+  box_split_key *key;   /* Hash key for this box. */
 } box_split;
 
 typedef struct {
@@ -82,6 +88,7 @@ int remove_split(box_split *split, int dim);
 int copy_box_split2(box_split *to, box_split *from);
 void free_box_split(box_split *split);
 box_split *new_box_split(int d);
+void *box_split_key(box_split *, int kmax);
 
 /* Functions for working with boxes. */
 void free_box_but_not_children(box *);
