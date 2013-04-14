@@ -7,16 +7,19 @@
 #define BOX_SUCCESS 1
 #define BOX_ERROR 0
 
-typedef struct {
-  int is_string; /* 1 if this key is a std::string.  0 ow. */
-  void *key;     /* Pointer to key. */
-} box_split_key;
+#define KEY_UNSIGNED_LONG_LONG 1
+#define KEY_STRING 2
 
 typedef struct {
-  int d;                /* Number of dimensions */
+  int d;             /* Number of dimensions. */
+  int kmax;          /* Max number of splits in a dimension. */
+  int key_hash_type; /* Indicates the data type used for the key hash. */
+} box_split_info;
+
+typedef struct {
   int *nsplit;          /* Number of splits in each direction. */
   unsigned int *split;  /* Split in each direction. */
-  box_split_key *key;   /* Hash key for this box. */
+  void *key;            /* Pointer to key hash for this split. */
 } box_split;
 
 typedef struct {
@@ -60,15 +63,14 @@ typedef struct box_node {
  * sufficient.  Patches welcome.
  */
 typedef struct {
-  box_node *boxes;  /* Linked list of boxes. */
-  int n;            /* Number of boxes. */
-  int d;            /* Number of dimensions. */
+  void *h;              /* Pointer to hash of boxes. */
+  box_split_info *info; /* Pointer to boxs plit info. */
 } box_collection;
 
 box_collection *points_to_boxes(double *px, int n, int d, int k_max);
 
 /* Functions for working with collections. */
-box_collection *new_box_collection(int);
+box_collection *new_box_collection(box_split_info *);
 int add_box(box_collection *, box *);
 int remove_box(box_collection *, box_split *split);
 box *find_box(box_collection *, box_split *split);
@@ -88,7 +90,13 @@ int remove_split(box_split *split, int dim);
 int copy_box_split2(box_split *to, box_split *from);
 void free_box_split(box_split *split);
 box_split *new_box_split(int d);
-void *box_split_key(box_split *, int kmax);
+void *new_box_split_key(box_split *, box_split_info *);
+void free_box_split_key(void *, box_split_info *);
+
+/* Box split info functions. */
+int box_split_key_type(int d, int kmax);
+box_split_info *new_box_split_info(int d, int kmax);
+void free_box_split_info(box_split_info *);
 
 /* Functions for working with boxes. */
 void free_box_but_not_children(box *);
