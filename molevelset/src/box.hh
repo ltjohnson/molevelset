@@ -1,6 +1,8 @@
 #ifndef box_h
 #define box_h
 
+#include <map>
+
 #define MAX_SPLITS 31 
 #define LEFT_SPLIT 0
 #define RIGHT_SPLIT 1
@@ -16,10 +18,29 @@ typedef struct {
   int key_hash_type; /* Indicates the data type used for the key hash. */
 } box_split_info;
 
+class BoxSplitKey {
+ private:
+  unsigned long long lkey;
+  string skey;
+  int key_hash_type;
+  
+  SetSplitULL(box_split *, box_split_info *);
+  SetSplitString(box_split *, box_split_info *);
+  
+ public:
+  BoxSplitKey();
+  BoxSplitKey(box_split *, box_split_info *);
+  SetSplit(box_split *, box_split_info *);
+  
+  friend bool operator< (const BoxSplitKey &left, 
+			 const BoxSplitKey &right);
+};
+
+
 typedef struct {
   int *nsplit;          /* Number of splits in each direction. */
   unsigned int *split;  /* Split in each direction. */
-  void *key;            /* Pointer to key hash for this split. */
+  BoxSplitKey *key;     /* Pointer to key hash for this split. */
 } box_split;
 
 typedef struct {
@@ -48,23 +69,13 @@ typedef struct box {
   box_risk risk;     /* Contains the risk information for this box. */
 } box;
 
-typedef struct box_node {
-  box *p;
-  struct box_node *next;
-} box_node;
 
 /* Box collections are used at each level of the level set finding
- * algorithm.  Boxes would best be stored in a hash, but AFAIK there are no
- * good GPL hash implementations in C available.  We could probably use
- * something from STL in C++, but I haven't investigated how hard that is
- * to do in a cross-platform R library.  Instead, we use a linked list.
- * Linked lists are probably fast enough, most of the time there won't be
- * that many boxes (max of 2^(k_max * d)) so a linear search is probably
- * sufficient.  Patches welcome.
- */
+ * algorithm.  We hash them by the split.  Fast searching is
+ * important.  We need to be able to find sibling boxes quickly. */
 typedef struct {
-  void *h;              /* Pointer to hash of boxes. */
-  box_split_info *info; /* Pointer to boxs plit info. */
+  map<BoxSplitKey,box *> *h; /* Pointer to map of boxes in collection. */
+  box_split_info *info;      /* Pointer to box split info for this collection. */
 } box_collection;
 
 box_collection *points_to_boxes(double *px, int n, int d, int k_max);
@@ -77,8 +88,6 @@ box *find_box(box_collection *, box_split *split);
 box *find_box_sibling(box_collection *, box_split *, int);
 void free_collection(box_collection *);
 box *get_first_box(box_collection *);
-int num_boxes_in_collection(box_collection *);
-box **get_terminal_boxes(box *);
 box **list_boxes(box_collection *src);
 
 int split_to_interval(box_split *split, int dim, double *x1, double *x2);
@@ -103,5 +112,6 @@ void free_box_but_not_children(box *);
 box *new_box(box_split *split, int size_guess);
 void add_point(box *, int);
 box *copy_box(box *);
+box **get_terminal_boxes(box *);
 
 #endif

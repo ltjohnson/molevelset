@@ -209,17 +209,7 @@ box_collection *new_box_collection(box_split_info *info) {
    */
   box_collection *p = (box_collection *)malloc(sizeof(box_collection));
   p->info = info;
-
-  switch (p->info->key_hash_type) {
-  case KEY_UNSIGNED_LONG_LONG:
-    p->h = (void *)new map<unsigned long long, box *>;
-    break;
-  case KEY_STRING:
-    p->h = (void *)new map<string, box *>;
-    break;
-  default:
-    p->h = NULL;
-  }
+  p->h = new map<BoxSplitKey, box *>;
   
   return p;
 }
@@ -282,23 +272,19 @@ int add_box(box_collection *pc, box *pb) {
    *   BOX_SUCCESS if box is succesfully added, BOX_ERROR otherwise.
    */
 
-  /* Don't add if one of the two pointers are NULL, or if this box is
-   * already in the collection. */
-  if (!pc || !pb || find_box(pc, pb->split)) {
+  /* Error if one or more pointers are NULL. */
+  if (!pc || !pb) {
+    return BOX_ERROR;
+  }
+  
+  /* Create key for this box. */
+  BoxSplitKey bsk(pb->split, pc->info);
+  if (pc->h->find(bsk) != pc->h->end()) {
     return BOX_ERROR;
   }
 
-  switch (pc->info->key_hash_type) {
-  case KEY_UNSIGNED_LONG_LONG:
-    map<unsigned long long, box *> *ph = (map<unsigned long long, box*> *)pc->h;
-    *ph[*(unsigned long long *)pb->split->key] = pb;
-    break;
-  case KEY_STRING:
-    map<string, box *> *ph = (map<string, box*> *)pc->h;
-    *ph[*(string *)pb->split->key] = pb;
-    break;
-  }
-
+  pc->h->at(bsk) = pb;
+  
   return BOX_SUCCESS;
 }
 
@@ -318,32 +304,16 @@ int remove_box(box_collection *pc, box_split *split) {
   if (!split) {
     return BOX_SUCCESS;
   }
-
-  box *pb = NULL;
-  switch (pc->info->key_hash_type) {
-  case KEY_UNSIGNED_LONG_LONG:
-    map<unsigned long long, box *> *ph = (map<unsigned long long, box*> *)pc->h;
-    map<unsigned long long, box*>::iterator it = 
-      ph->find(*(unsigned long long *)split->key);
-    if (it == map::end) {
-      return BOX_SUCCESS;
-    }
-    pb = it->second;
-    ph->erase(it);
-    break;
-  case KEY_STRING:
-    map<string, box *> *ph = (map<string, box*> *)pc->h;
-    map<string, box*>::iterator it = 
-      ph->find(*(string *)split->key);
-    if (it == map::end) {
-      return BOX_SUCCESS;
-    }
-    pb = it->second;
-    ph->erase(it);
-    break;
+  
+  BoxSplitKey bsk(split, pc->info);
+  map<BoxSplitKey, box *>::iterator it = pc->h->find(bsk);
+  
+  if (it == pc->h->end()) {
+    return BOX_SUCCESS;
   }
   
-  free_box_but_not_children(pb);
+  free_box_but_not_children(it->second);
+  pc->h->erase(it);
   
   return BOX_SUCCESS;
 }
@@ -358,16 +328,17 @@ box *find_box(box_collection *pc, box_split *split) {
    *   Returns pointer to box that matches the given splits if one is found, 
    *   NULL otherwise.
    */
-  box_node *p_node = pc->boxes;
+  if (!pc || !split) {
+    return NULL;
+  }
 
-  while(p_node) {
-    if (compare_splits(p_node->p->split, split)) { 
-      return p_node->p;
-    }
-    p_node = p_node->next;
+  BoxSplitKey bsk(split, pc->info);
+  map<BoxSplitKey, box *>::iterator it = pc->h->find(bsk);
+  if (it == pc->h->end()) {
+    return NULL;
   }
   
-  return NULL;
+  return it->second;
 }
 
 box *find_box_sibling(box_collection *pc, box_split *ps, int dim) {
@@ -404,16 +375,15 @@ box **list_boxes(box_collection *src) {
    */
   if (!src)
     return NULL;
-  box **arr = (box **)malloc(sizeof(box *) * (src->n + 1));
+  box **arr = (box **)malloc(sizeof(box *) * (src->h->size() + 1));
 
-  box_node *node = src->boxes;
   int i = 0;
-
-  while (i < src->n) {
-    arr[i++] = node->p;
-    node = node->next;
+  for (map<BoxSplitKey, box *>::iterator it = src->h->first();
+       it != src->h->end();
+       it++) {
+    arr[i++] = it->second;
   }
-  
+
   arr[i] = NULL;
 
   return arr;
@@ -427,7 +397,11 @@ box *get_first_box(box_collection *p) {
    * Returns:
    *   pointer to the box, or NULL.
    */
-  return p->n ? p->boxes->p : NULL;
+  if (!p) {
+    return NULL;
+  }
+  map<BoxSplitKey, box *>::iterator it = p->h->first();
+  return it == p->h->end() ? NULL : it->second;
 }
 
 void free_collection(box_collection *p) {
@@ -436,20 +410,17 @@ void free_collection(box_collection *p) {
    * Args:
    *   p: pointer to box collection to free.
    */
-  box_node *p_node, *tmp;
-
   if (!p) {
     return;
   }
   
-  p_node = p->boxes;
-  while (p_node) {
-    tmp = p_node->next;
-    free_box_but_not_children(p_node->p);
-    free(p_node);
-    p_node = tmp;
+  for (map<BoxSplitKey, box *>::iterator it = p->h->first();
+       it != p->h->end();
+       it++) {
+    free_box_but_not_children(it->second);
   }
   
+  delete p->h;
   free(p);
 }
 
@@ -562,83 +533,6 @@ int box_split_key_type(int d, int kmax) {
     return KEY_STRING;
 }
 
-void *box_split_key_ull(box_split *p, box_split_info *info) {
-  /* We can encode all of the splits inside of an unsigned long long. */
-  unsigned long long encoded = 0;
-  int shift = 0;
-  /* First encode the number of splits. */
-  for (int i = 0; i < p->d; i++) {
-    encoded |= split[i] << shift;
-    shift += kmax;
-  }
-
-  /* Now encode the splits in each direction. */
-  for (int i = 0; i < p->d; i++) {
-    /* If we guaranteed a set state for the unused split bits, we 
-     * wouldn't need this inner loop. */
-    encoded |= 
-      (p->split.split[i] & ((1 << p->split.nsplit[i]) - 1)) << shift;
-    shift += kmax;
-  }
-    
-  unsigned long long *key = 
-    (unsigned long long *)malloc(sizeof(unsigned long long));
-  *key = encoded;
-
-  return (void *)key;
-}
-
-void *box_split_key_string(box_split *p, box_split_info *info) {
-  /* Time to give up and encode it as a string. */
-  string *key = new string;
-    
-  for (int i = 0; i < info->d; i++) {
-    *key << (p->split.split[i] & (1 << p->split.nsplit[i] - 1)) << " ";
-  }
-
-  return (void *)key;
-}
-
-void *new_box_split_key(box_split *p, box_split_info *info) {
-  /* Return a pointer to a new box_split_key.
-   * 
-   * Args:
-   *  p: pointer to box split to convert.
-   *  info: pointer to box split info.
-   * Returns:
-   *  pointer to key hash for this box split.
-   */
-  if (!p)
-    return NULL;
-  switch (info->key_hash_type) {
-  case KEY_UNSIGNED_LONG_LONG:
-    return box_split_key_ull(p, info);
-  case: KEY_STRING:
-    return box_split_key_string(p, info);
-  default:
-    return NULL;
-  }
-}
-
-void free_box_split_key(void *k, box_split_info *info) {
-  /* Free the memory associated with a box split hash key.
-   *
-   * Args:
-   *  k: point to key hash.
-   *  info: pointer to box split info.
-   * Returns:
-   *  Nothing.
-   */
-  switch (info->key_hash_type) {
-  case KEY_UNSIGNED_LONG_LONG:
-    free(k);
-    break;
-  case KEY_STRING:
-    delete (string *)k;
-    break;
-  }
-}
-
 box_node *_get_boxes(box *box, box_node *node) {
   /* Recursively iterate on the tree contained in box. 
    * 
@@ -711,4 +605,66 @@ box **get_terminal_boxes(box *p) {
   }
 
   return ret;
+}
+
+BoxSplitKey::BoxSplitKey() {
+}
+
+BoxSplitKey::BoxSplitKey(box_split *ps, box_split_info *pi) {
+  SetSplit(ps, pi);
+}
+
+BoxSplitKey::SetSplit(box_split *ps, box_split_info *pi) {
+  key_hash_type = pi->key_hash_type;
+  switch(key_hash_type) {
+  case KEY_UNSIGNED_LONG_LONG:
+    SetSplitULL(ps, pi);
+    break;
+  case KEY_STRING:
+    SetSplitString(ps, pi);
+    break;
+  }
+}
+
+BoxSplitKey::SetSplitULL(box_split *ps, box_split_info *pi) {
+  /* We can encode all of the splits inside of an unsigned long long. */
+  lkey = 0;
+
+  int shift = 0;
+  /* First encode the number of splits. */
+  for (int i = 0; i < p->d; i++) {
+    lkey |= split[i] << shift;
+    shift += kmax;
+  }
+
+  /* Now encode the splits in each direction. */
+  for (int i = 0; i < p->d; i++) {
+    /* If we guaranteed a set state for the unused split bits, we 
+     * wouldn't need this inner loop. */
+    lkey |= 
+      (p->split.split[i] & ((1 << p->split.nsplit[i]) - 1)) << shift;
+    shift += kmax;
+  }
+}
+
+BoxSplitKey::SetSplitString(box_split *, box_split_info *pi) {
+  skey = "";
+  
+  for (int i = 0; i < info->d; i++) {
+    skey << (p->split.split[i] & (1 << p->split.nsplit[i] - 1)) << " ";
+  }
+
+}
+
+BoxSplitKey::operator<(const BoxSplitKey &left, const BoxSplitKey &right) {
+  switch (left.key_hash_type) {
+  case KEY_UNSIGNED_LONG_LONG:
+    return left.lkey < right.lkey;
+    break;
+  case KEY_STRING:
+    return left.skey < right.skey;
+    break;
+  default:
+    return false;
+  }
 }
