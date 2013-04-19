@@ -2,6 +2,9 @@
 #define box_h
 
 #include <map>
+#include <string>
+
+using namespace::std;
 
 #define MAX_SPLITS 31 
 #define LEFT_SPLIT 0
@@ -18,30 +21,29 @@ typedef struct {
   int key_hash_type; /* Indicates the data type used for the key hash. */
 } box_split_info;
 
+typedef struct {
+  int *nsplit;          /* Number of splits in each direction. */
+  unsigned int *split;  /* Split in each direction. */
+  int d;                /* Number of dimensions. */
+} box_split;
+
 class BoxSplitKey {
  private:
   unsigned long long lkey;
   string skey;
   int key_hash_type;
   
-  SetSplitULL(box_split *, box_split_info *);
-  SetSplitString(box_split *, box_split_info *);
+  void SetSplitULL(box_split *, box_split_info *);
+  void SetSplitString(box_split *, box_split_info *);
   
  public:
   BoxSplitKey();
   BoxSplitKey(box_split *, box_split_info *);
-  SetSplit(box_split *, box_split_info *);
+  void SetSplit(box_split *, box_split_info *);
   
-  friend bool operator< (const BoxSplitKey &left, 
-			 const BoxSplitKey &right);
+  bool operator<(const BoxSplitKey &right) const;
 };
 
-
-typedef struct {
-  int *nsplit;          /* Number of splits in each direction. */
-  unsigned int *split;  /* Split in each direction. */
-  BoxSplitKey *key;     /* Pointer to key hash for this split. */
-} box_split;
 
 typedef struct {
   int calculated;       /* Indicates if the risk components for this box
@@ -99,8 +101,6 @@ int remove_split(box_split *split, int dim);
 int copy_box_split2(box_split *to, box_split *from);
 void free_box_split(box_split *split);
 box_split *new_box_split(int d);
-void *new_box_split_key(box_split *, box_split_info *);
-void free_box_split_key(void *, box_split_info *);
 
 /* Box split info functions. */
 int box_split_key_type(int d, int kmax);
@@ -109,7 +109,7 @@ void free_box_split_info(box_split_info *);
 
 /* Functions for working with boxes. */
 void free_box_but_not_children(box *);
-box *new_box(box_split *split, int size_guess);
+box *new_box(box_split *, int);
 void add_point(box *, int);
 box *copy_box(box *);
 box **get_terminal_boxes(box *);

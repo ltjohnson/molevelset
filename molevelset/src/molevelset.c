@@ -111,7 +111,7 @@ void print_split(box_split *s) {
   printf("}");
 }
 
-box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la) {
+box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la, box_split_info *info) {
   /* Combine two boxes. 
    *
    * Args:
@@ -120,6 +120,7 @@ box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la) {
    *   dim: integer, dimension being combined to create a parent box.
    *   la: levelset_args pointer, holds parameter values for the levelset 
    *     algorithm.
+   *   info: box_split_info pointer.
    * Returns:
    *   pointer to the box containing the combined boxes.
    */
@@ -134,7 +135,7 @@ box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la) {
   int parent_size = p1->points.n + (p2 ? p2->points.n : 0);
   box_split *parent_split = copy_box_split(p1->split);
   remove_split(parent_split, dim);
-  box *parent = new_box(parent_split, parent_size);
+  box *parent = new_box(parent_split, info, parent_size);
   
   /* Combine the two boxes. */
   for (int i = 0; i < p1->points.n; i++) 
@@ -237,7 +238,7 @@ box_collection *minimax_step(box_collection *src, levelset_args *la) {
    *   pointer to new box_collection, contains boxes found by collapsing this
    *   level of the box_collection.
    */
-  box_collection *dst = new_box_collection(src->d);
+  box_collection *dst = new_box_collection(src->info);
   
   if (!src->n) 
     return dst;

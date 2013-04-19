@@ -7,7 +7,7 @@
 #include <R.h>
 #include <Rinternals.h>
 
-#include "box.h"
+#include "box.hh"
 
 /* Some private functions. */
 unsigned int point_to_split(double *px, int d, int k_max);
@@ -32,8 +32,8 @@ box *new_box(box_split *split, int size_guess) {
   p = (box *)malloc(sizeof(box));
   p->split = copy_box_split(split);
 
-  p->checked = (int *)malloc(sizeof(int) * p->split->d);
-  memset(p->checked, 0, sizeof(int) * p->split->d);
+  p->checked = (int *)malloc(sizeof(int) * split->d);
+  memset(p->checked, 0, sizeof(int) * split->d);
   
   /* Boxes default to terminal because they don't have children. */
   p->terminal_box = 1;
@@ -230,13 +230,14 @@ box_collection *points_to_boxes(double *px, int n, int d, int k_max) {
   box *cur_box;
   box_collection *p_collection;
   box_split *p_split = new_box_split(d);
+  box_split_info *info = new_box_split_info(d, k_max);
 
   /* Initialized once, nsplits is constant in this function. */
   for (j = 0; j < d; j++) {
     p_split->nsplit[j] = k_max;
   }
 
-  p_collection = new_box_collection(d);
+  p_collection = new_box_collection(info);
   
   for(i = 0; i < n; i++) {
     for(j = 0; j < d; j++) {
@@ -378,7 +379,7 @@ box **list_boxes(box_collection *src) {
   box **arr = (box **)malloc(sizeof(box *) * (src->h->size() + 1));
 
   int i = 0;
-  for (map<BoxSplitKey, box *>::iterator it = src->h->first();
+  for (map<BoxSplitKey, box *>::iterator it = src->h->begin();
        it != src->h->end();
        it++) {
     arr[i++] = it->second;
@@ -400,7 +401,7 @@ box *get_first_box(box_collection *p) {
   if (!p) {
     return NULL;
   }
-  map<BoxSplitKey, box *>::iterator it = p->h->first();
+  map<BoxSplitKey, box *>::iterator it = p->h->begin();
   return it == p->h->end() ? NULL : it->second;
 }
 
@@ -414,7 +415,7 @@ void free_collection(box_collection *p) {
     return;
   }
   
-  for (map<BoxSplitKey, box *>::iterator it = p->h->first();
+  for (map<BoxSplitKey, box *>::iterator it = p->h->begin();
        it != p->h->end();
        it++) {
     free_box_but_not_children(it->second);
@@ -438,6 +439,7 @@ box_split *copy_box_split(box_split *split) {
   }
 
   box_split *p = new_box_split(split->d);
+  p->d = split->d;
   
   for (int i = 0; i < p->d; i++) {
     p->nsplit[i] = split->nsplit[i];
@@ -520,7 +522,6 @@ box_split *new_box_split(int d) {
   p->d      = d;
   p->nsplit = (int *)malloc(d * sizeof(int));
   p->split  = (unsigned int *)malloc(d * sizeof(unsigned int));
-  p->key    = NULL;
   
   return p;
 }
@@ -532,6 +533,11 @@ int box_split_key_type(int d, int kmax) {
   else
     return KEY_STRING;
 }
+
+typedef struct box_node {
+  box_node *next;
+  box *p;
+} box_node;
 
 box_node *_get_boxes(box *box, box_node *node) {
   /* Recursively iterate on the tree contained in box. 
@@ -567,8 +573,11 @@ box **get_terminal_boxes(box *p) {
    *   collection.
    */
   box **ret = NULL;
-  if (!p)
-    goto out;
+  if (!p) {
+    ret = (box **)malloc(sizeof(box *));
+    ret[0] = NULL;
+    return ret;
+  }
 
   box_node *terminal_boxes = _get_boxes(p, NULL);
   
@@ -579,8 +588,11 @@ box **get_terminal_boxes(box *p) {
     tmp = tmp->next;
   }
   
-  if (!nboxes) 
-    goto out;
+  if (!nboxes) {
+    ret = (box **)malloc(sizeof(box *));
+    ret[0] = NULL;
+    return ret;
+  }
   
   ret = (box **)malloc(sizeof(box *) * (nboxes + 1));
   tmp = terminal_boxes;
@@ -597,8 +609,6 @@ box **get_terminal_boxes(box *p) {
     terminal_boxes = tmp;
   }
 
- out:
-  
   if (!ret) {
     ret = (box **)malloc(sizeof(box *));
     ret[0] = NULL;
@@ -614,7 +624,7 @@ BoxSplitKey::BoxSplitKey(box_split *ps, box_split_info *pi) {
   SetSplit(ps, pi);
 }
 
-BoxSplitKey::SetSplit(box_split *ps, box_split_info *pi) {
+void BoxSplitKey::SetSplit(box_split *ps, box_split_info *pi) {
   key_hash_type = pi->key_hash_type;
   switch(key_hash_type) {
   case KEY_UNSIGNED_LONG_LONG:
@@ -626,43 +636,43 @@ BoxSplitKey::SetSplit(box_split *ps, box_split_info *pi) {
   }
 }
 
-BoxSplitKey::SetSplitULL(box_split *ps, box_split_info *pi) {
+void BoxSplitKey::SetSplitULL(box_split *ps, box_split_info *pi) {
   /* We can encode all of the splits inside of an unsigned long long. */
   lkey = 0;
 
   int shift = 0;
   /* First encode the number of splits. */
-  for (int i = 0; i < p->d; i++) {
-    lkey |= split[i] << shift;
-    shift += kmax;
+  for (int i = 0; i < pi->d; i++) {
+    lkey |= ps->split[i] << shift;
+    shift += pi->kmax;
   }
 
   /* Now encode the splits in each direction. */
-  for (int i = 0; i < p->d; i++) {
+  for (int i = 0; i < pi->d; i++) {
     /* If we guaranteed a set state for the unused split bits, we 
      * wouldn't need this inner loop. */
     lkey |= 
-      (p->split.split[i] & ((1 << p->split.nsplit[i]) - 1)) << shift;
-    shift += kmax;
+      (ps->split[i] & ((1 << ps->nsplit[i]) - 1)) << shift;
+    shift += pi->kmax;
   }
 }
 
-BoxSplitKey::SetSplitString(box_split *, box_split_info *pi) {
+void BoxSplitKey::SetSplitString(box_split *ps, box_split_info *pi) {
   skey = "";
   
-  for (int i = 0; i < info->d; i++) {
-    skey << (p->split.split[i] & (1 << p->split.nsplit[i] - 1)) << " ";
+  for (int i = 0; i < pi->d; i++) {
+    skey += (ps->split[i] & (1 << ps->nsplit[i] - 1)) + " ";
   }
 
 }
 
-BoxSplitKey::operator<(const BoxSplitKey &left, const BoxSplitKey &right) {
-  switch (left.key_hash_type) {
+bool BoxSplitKey::operator<(const BoxSplitKey &right) const {
+  switch (key_hash_type) {
   case KEY_UNSIGNED_LONG_LONG:
-    return left.lkey < right.lkey;
+    return lkey < right.lkey;
     break;
   case KEY_STRING:
-    return left.skey < right.skey;
+    return skey < right.skey;
     break;
   default:
     return false;
