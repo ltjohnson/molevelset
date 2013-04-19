@@ -4,7 +4,7 @@
 #include <R.h>
 #include <Rinternals.h>
 
-#include "box.h"
+#include "box.hh"
 #include "molevelset.h"
 
 
