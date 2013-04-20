@@ -5,12 +5,10 @@
 #include <Rinternals.h>
 
 #include "box.hh"
-#include "molevelset.h"
+#include "molevelset.hh"
 
-
-void print_box(box *);
-void print_collection(box_collection *);
-box *combine_boxes(box *p1, box *p2, int dim, levelset_args *);
+box *combine_boxes(box *p1, box *p2, int dim, levelset_args *, 
+		   box_split_info *);
 double inset_risk(box *p, levelset_args *);
 double complexity_penalty(box *p, int n, double delta);
 levelset_estimate initialize_levelset_estimate(box *, levelset_args);
@@ -98,20 +96,8 @@ int find_parent(box *pb, box_split *ps, int dim) {
   return BOX_SUCCESS;
 }
 
-void print_split(box_split *s) {
-  printf("{");
-  for (int i = 0; i < s->d; i++) {
-    printf("[%d:%d:", i, s->nsplit[i]);
-    for (int j = 0; j < s->nsplit[i]; j++) {
-      int tmp = (s->split[i] & (1 << j)) >> j;
-      printf(" %d", tmp + 1);
-    }
-    printf("] ");
-  }
-  printf("}");
-}
-
-box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la, box_split_info *info) {
+box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la, 
+		   box_split_info *info) {
   /* Combine two boxes. 
    *
    * Args:
@@ -135,7 +121,7 @@ box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la, box_split_info 
   int parent_size = p1->points.n + (p2 ? p2->points.n : 0);
   box_split *parent_split = copy_box_split(p1->split);
   remove_split(parent_split, dim);
-  box *parent = new_box(parent_split, info, parent_size);
+  box *parent = new_box(parent_split, parent_size);
   
   /* Combine the two boxes. */
   for (int i = 0; i < p1->points.n; i++) 
@@ -240,7 +226,7 @@ box_collection *minimax_step(box_collection *src, levelset_args *la) {
    */
   box_collection *dst = new_box_collection(src->info);
   
-  if (!src->n) 
+  if (!box_collection_size(src)) 
     return dst;
 
   box **arr = list_boxes(src);
@@ -248,7 +234,8 @@ box_collection *minimax_step(box_collection *src, levelset_args *la) {
     /* No boxes in collection, return empty collection. */
     return dst;
   
-  for (int i = 0; i < src->n; i++) {
+  int collection_size = box_collection_size(src);
+  for (int i = 0; i < collection_size; i++) {
     box * cur = arr[i];
     for (int j = 0; j < cur->split->d; j++) {
       /* Skip if this split has already been checked by a sibling box. */
@@ -263,7 +250,7 @@ box_collection *minimax_step(box_collection *src, levelset_args *la) {
       
       /* Find the sibling box and combine this box with it. */
       box *sib = find_box_sibling(src, cur->split, j);
-      box *parent = combine_boxes(cur, sib, j, la);
+      box *parent = combine_boxes(cur, sib, j, la, src->info);
       
       /* If the parent box is already in the tree, keep the one with the
 	 lowest risk. */
@@ -304,12 +291,15 @@ levelset_estimate compute_levelset(box_collection *pinitial, levelset_args la) {
 
   box_collection *pc[max_depth];
   pc[0] = pinitial;
+
   /* Calculate all of the costs for the initial boxes. */
-  box_node *node = pc[0]->boxes;
-  while (node) {
-    node->p->risk = levelset_cost(node->p, &la);
-    node = node->next;
+  box **boxes = list_boxes(pc[0]);
+  int boxPos = 0;
+  while (boxes[boxPos]) {
+    boxes[boxPos]->risk = levelset_cost(boxes[boxPos], &la);
+    boxPos++;
   }
+  free(boxes);
   
   /* Collapse levels, one at a time, bottom (most splits) to top (no
      splits). */
@@ -378,27 +368,3 @@ levelset_estimate initialize_levelset_estimate(box *p, levelset_args la) {
   return(le);
 }
 
-void print_collection(box_collection *pc) {
-  printf("box collection %d boxes.\n", pc->n);
-  box_node *node = pc->boxes;
-  int i = 0;
-  while (node) {
-    printf("  [%d]: ", i++);
-    print_box(node->p);
-    node = node->next;
-  }
-}
-
-void print_box(box *p) {
-  printf("box: ");
-  print_split(p->split);
-  printf(" points: {");
-  for (int i = 0; i < p->points.n; i++) {
-    printf("%d, ", p->points.i[i]);
-  }
-  printf("} inset: %d terminal_box: %d", p->risk.inset, p->terminal_box);
-  if (!p->terminal_box) {
-    printf(" child[0] = %p child[1] = %p", (void *)p->children[0], (void *)p->children[1]);
-  }
-  printf("\n");
-}

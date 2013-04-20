@@ -1,4 +1,16 @@
 library(molevelset)
+###########################################################################
+# Simple test with only a few boxes.
+n <- 4
+k.max <- 2
+X <- matrix(runif(2 * n), ncol=2)
+Y <- runif(n)
+le <- molevelset(X, Y, k.max=k.max, gamma=0.5, rho=0.01)
+
+plot.molevelset(le, points=TRUE, combine.boxes=TRUE,
+                col.noninset=NA, border.noninset=NA,
+                col.inset="gray", border.inset="red")
+
 
 ###########################################################################
 ## Circle in the upper right example.
@@ -11,7 +23,7 @@ Y <- ifelse(rowSums((X - 1)^2) <= (0.2 * sqrt(2))^2, 1, 0)
 le <- molevelset(X, Y, k.max=k.max, gamma=0.5, rho=0)
 plot.molevelset(le, points=FALSE, combine.boxes=TRUE,
                 col.noninset=NA, border.noninset=NA,
-                col.inset="black", border.inset=NA)
+                col.inset="gray", border.inset="red")
 
 le1 <- molevelset(X, Y, k.max=k.max, gamma=0.5, rho=1)
 plot.molevelset(le1, points=FALSE, combine.boxes=TRUE,

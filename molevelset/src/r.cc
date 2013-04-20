@@ -2,10 +2,12 @@
 #include <Rinternals.h>
 
 #include "box.hh"
-#include "molevelset.h"
+#include "molevelset.hh"
 
-SEXP box_to_list(box *p);
-extern C {
+
+extern "C" {
+  SEXP box_to_list(box *p);
+
   SEXP get_boxes(SEXP X, SEXP k_max) {
     SEXP ans, dim;
     box_collection *pc;
@@ -23,12 +25,13 @@ extern C {
 			 INTEGER(k_max)[0]);
   
     /* Copy boxes out to a list. */
-    PROTECT(ans = allocVector(VECSXP, pc->n));
-    box_node *p_node = pc->boxes;
-    for (int i = 0; i < pc->n; i++) {
-      SET_VECTOR_ELT(ans, i, box_to_list(p_node->p));
-      p_node = p_node->next;
+    int boxCount = box_collection_size(pc);
+    PROTECT(ans = allocVector(VECSXP, boxCount));
+    box **boxes = list_boxes(pc);
+    for (int i = 0; i < boxCount; i++) {
+      SET_VECTOR_ELT(ans, i, box_to_list(boxes[i]));
     }
+    free(boxes);
   
     free_collection(pc);
 

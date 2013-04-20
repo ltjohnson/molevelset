@@ -4,8 +4,6 @@
 #include <map>
 #include <string>
 
-using namespace::std;
-
 #define MAX_SPLITS 31 
 #define LEFT_SPLIT 0
 #define RIGHT_SPLIT 1
@@ -30,7 +28,7 @@ typedef struct {
 class BoxSplitKey {
  private:
   unsigned long long lkey;
-  string skey;
+  std::string skey;
   int key_hash_type;
   
   void SetSplitULL(box_split *, box_split_info *);
@@ -40,6 +38,8 @@ class BoxSplitKey {
   BoxSplitKey();
   BoxSplitKey(box_split *, box_split_info *);
   void SetSplit(box_split *, box_split_info *);
+  
+  void print_key() const;
   
   bool operator<(const BoxSplitKey &right) const;
 };
@@ -76,8 +76,9 @@ typedef struct box {
  * algorithm.  We hash them by the split.  Fast searching is
  * important.  We need to be able to find sibling boxes quickly. */
 typedef struct {
-  map<BoxSplitKey,box *> *h; /* Pointer to map of boxes in collection. */
-  box_split_info *info;      /* Pointer to box split info for this collection. */
+  std::map<BoxSplitKey,box *> *h; /* Pointer to map of boxes in collection. */
+  box_split_info *info;           /* Pointer to box split info for
+				     this collection. */
 } box_collection;
 
 box_collection *points_to_boxes(double *px, int n, int d, int k_max);
@@ -86,6 +87,7 @@ box_collection *points_to_boxes(double *px, int n, int d, int k_max);
 box_collection *new_box_collection(box_split_info *);
 int add_box(box_collection *, box *);
 int remove_box(box_collection *, box_split *split);
+int box_collection_size(box_collection *);
 box *find_box(box_collection *, box_split *split);
 box *find_box_sibling(box_collection *, box_split *, int);
 void free_collection(box_collection *);
@@ -103,7 +105,7 @@ void free_box_split(box_split *split);
 box_split *new_box_split(int d);
 
 /* Box split info functions. */
-int box_split_key_type(int d, int kmax);
+int box_split_key_hash_type(int d, int kmax);
 box_split_info *new_box_split_info(int d, int kmax);
 void free_box_split_info(box_split_info *);
 
@@ -113,5 +115,10 @@ box *new_box(box_split *, int);
 void add_point(box *, int);
 box *copy_box(box *);
 box **get_terminal_boxes(box *);
+
+/* Output functions, only used for debugging.  */
+void print_box(box *);
+void print_collection(box_collection *);
+void print_split(box_split *s);
 
 #endif

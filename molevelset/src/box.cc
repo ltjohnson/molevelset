@@ -1,13 +1,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <string>
-
-
 #include <R.h>
 #include <Rinternals.h>
 
 #include "box.hh"
+
+using namespace::std;
 
 /* Some private functions. */
 unsigned int point_to_split(double *px, int d, int k_max);
@@ -284,7 +283,7 @@ int add_box(box_collection *pc, box *pb) {
     return BOX_ERROR;
   }
 
-  pc->h->at(bsk) = pb;
+  pc->h->operator[](bsk) = pb;
   
   return BOX_SUCCESS;
 }
@@ -317,6 +316,20 @@ int remove_box(box_collection *pc, box_split *split) {
   pc->h->erase(it);
   
   return BOX_SUCCESS;
+}
+
+int box_collection_size(box_collection *pc) {
+  /* Get the number of boxes in a collection.
+   *
+   * Args:
+   *   pc: pointer to box collection.
+   * Returns:
+   *   integer, number of boxes in pc.
+   */
+  if (!pc) {
+    return 0;
+  }
+  return pc->h->size();
 }
 
 box *find_box(box_collection *pc, box_split *split) {
@@ -526,7 +539,7 @@ box_split *new_box_split(int d) {
   return p;
 }
 
-int box_split_key_type(int d, int kmax) {
+int box_split_key_hash_type(int d, int kmax) {
   int total_max_splits = d * kmax;
   if (total_max_splits <= sizeof(unsigned int) * CHAR_BIT)
     return KEY_UNSIGNED_LONG_LONG;
@@ -617,6 +630,15 @@ box **get_terminal_boxes(box *p) {
   return ret;
 }
 
+box_split_info *new_box_split_info(int d, int kmax) {
+  /*  */
+  box_split_info *info = (box_split_info *)malloc(sizeof(box_split_info));
+  info->d = d;
+  info->kmax = kmax;
+  info->key_hash_type = box_split_key_hash_type(d, kmax);
+  return info;
+}
+
 BoxSplitKey::BoxSplitKey() {
 }
 
@@ -663,7 +685,6 @@ void BoxSplitKey::SetSplitString(box_split *ps, box_split_info *pi) {
   for (int i = 0; i < pi->d; i++) {
     skey += (ps->split[i] & (1 << ps->nsplit[i] - 1)) + " ";
   }
-
 }
 
 bool BoxSplitKey::operator<(const BoxSplitKey &right) const {
@@ -677,4 +698,58 @@ bool BoxSplitKey::operator<(const BoxSplitKey &right) const {
   default:
     return false;
   }
+}
+
+void BoxSplitKey::print_key() const {
+  switch(key_hash_type) {
+  case KEY_UNSIGNED_LONG_LONG:
+    printf("%llu", lkey);
+    break;
+  case KEY_STRING:
+    printf("%s", skey.c_str());
+    break;
+  default:
+    return;
+  }
+}
+
+/* Output functions, used for debugging. */
+void print_split(box_split *s) {
+  printf("{");
+  for (int i = 0; i < s->d; i++) {
+    printf("[%d:%d:", i, s->nsplit[i]);
+    for (int j = 0; j < s->nsplit[i]; j++) {
+      int tmp = (s->split[i] & (1 << j)) >> j;
+      printf(" %d", tmp + 1);
+    }
+    printf("] ");
+  }
+  printf("}");
+}
+
+void print_collection(box_collection *pc) {
+  printf("box collection %d boxes.\n", box_collection_size(pc));
+  box **boxes = list_boxes(pc);
+  int boxPos = 0;
+  while(boxes[boxPos]) {
+    printf("  [%d]: ", boxPos);
+    print_box(boxes[boxPos]);
+    boxPos++;
+  }
+  free(boxes);
+}
+
+void print_box(box *p) {
+  printf("box: ");
+  print_split(p->split);
+  printf(" points: {");
+  for (int i = 0; i < p->points.n; i++) {
+    printf("%d, ", p->points.i[i]);
+  }
+  printf("} inset: %d terminal_box: %d", p->risk.inset, p->terminal_box);
+  if (!p->terminal_box) {
+    printf(" child[0] = %p child[1] = %p", 
+	   (void *)p->children[0], (void *)p->children[1]);
+  }
+  printf("\n");
 }

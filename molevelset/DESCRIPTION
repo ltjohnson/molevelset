@@ -10,4 +10,3 @@ Description: Implements the level set estimation method as described in
    Willett, R., and Nowak, R. (2007). "Minimax Optimal Level Set Estimation." 
    IEEE Transactions on Image Processing, 16, 2965--2979.
 License: GPL-2
-LazyLoad: yes
