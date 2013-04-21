@@ -14,14 +14,13 @@ plot.molevelset(le, points=TRUE, combine.boxes=TRUE,
 
 ###########################################################################
 ## Circle in the upper right example.
-n <- 200
-k.max <- 6
-k.max <- 3
+k.max <- 8
+n <- 2**k.max
 X <- expand.grid(seq(0, 1, length.out=n), seq(0, 1, length.out=n))
 X <- as.matrix(X)
 Y <- ifelse(rowSums((X - 1)^2) <= (0.2 * sqrt(2))^2, 1, 0)
 
-le <- molevelset(X, Y, k.max=k.max, gamma=0.5, rho=0)
+system.time(le <- molevelset(X, Y, k.max=k.max, gamma=0.5, rho=0))
 plot.molevelset(le, points=FALSE, combine.boxes=TRUE,
                 col.noninset=NA, border.noninset=NA,
                 col.inset="gray", border.inset="red")
