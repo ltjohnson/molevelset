@@ -16,6 +16,7 @@ plot.molevelset(le, points=TRUE, combine.boxes=TRUE,
 ## Circle in the upper right example.
 n <- 200
 k.max <- 6
+k.max <- 3
 X <- expand.grid(seq(0, 1, length.out=n), seq(0, 1, length.out=n))
 X <- as.matrix(X)
 Y <- ifelse(rowSums((X - 1)^2) <= (0.2 * sqrt(2))^2, 1, 0)
