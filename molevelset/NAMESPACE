@@ -1,7 +1,5 @@
 useDynLib(molevelset)
 
-import(hash)
-
 useDynLib(molevelset)
 
 export(molevelset)
