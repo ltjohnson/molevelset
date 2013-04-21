@@ -42,6 +42,7 @@ box *new_box(box_split *split, int size_guess) {
   p->points.i = (int *)malloc(sizeof(int) * size_guess);
 
   p->risk.calculated = 0;
+  p->risk.inset = -1;
   
   return p;
 }
@@ -665,7 +666,7 @@ void BoxSplitKey::SetSplitULL(box_split *ps, box_split_info *pi) {
   int shift = 0;
   /* First encode the number of splits. */
   for (int i = 0; i < pi->d; i++) {
-    lkey |= ps->split[i] << shift;
+    lkey |= ps->nsplit[i] << shift;
     shift += pi->kmax;
   }
 
@@ -742,11 +743,13 @@ void print_collection(box_collection *pc) {
 void print_box(box *p) {
   printf("box: ");
   print_split(p->split);
+  /*
   printf(" points: {");
   for (int i = 0; i < p->points.n; i++) {
     printf("%d, ", p->points.i[i]);
   }
-  printf("} inset: %d terminal_box: %d", p->risk.inset, p->terminal_box);
+  printf("} */
+  printf(" inset: %d terminal_box: %d", p->risk.inset, p->terminal_box);
   if (!p->terminal_box) {
     printf(" child[0] = %p child[1] = %p", 
 	   (void *)p->children[0], (void *)p->children[1]);

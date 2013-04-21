@@ -303,8 +303,9 @@ levelset_estimate compute_levelset(box_collection *pinitial, levelset_args la) {
   
   /* Collapse levels, one at a time, bottom (most splits) to top (no
      splits). */
-  for (int i = 1; i < max_depth; i++)
+  for (int i = 1; i < max_depth; i++) {
     pc[i] = minimax_step(pc[i - 1], &la);
+  }
   
   levelset_estimate le  = initialize_levelset_estimate(get_first_box(pc[max_depth - 1]),
 						       la);
