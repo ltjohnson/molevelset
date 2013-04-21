@@ -250,6 +250,9 @@ box_collection *minimax_step(box_collection *src, levelset_args *la) {
       
       /* Find the sibling box and combine this box with it. */
       box *sib = find_box_sibling(src, cur->split, j);
+      if (sib != NULL) {
+	sib->checked[j] = 1;
+      }
       box *parent = combine_boxes(cur, sib, j, la, src->info);
       
       /* If the parent box is already in the tree, keep the one with the
