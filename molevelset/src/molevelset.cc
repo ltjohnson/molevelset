@@ -4,13 +4,11 @@
 #include <R.h>
 #include <Rinternals.h>
 
-#include "box.h"
-#include "molevelset.h"
+#include "box.hh"
+#include "molevelset.hh"
 
-
-void print_box(box *);
-void print_collection(box_collection *);
-box *combine_boxes(box *p1, box *p2, int dim, levelset_args *);
+box *combine_boxes(box *p1, box *p2, int dim, levelset_args *, 
+		   box_split_info *);
 double inset_risk(box *p, levelset_args *);
 double complexity_penalty(box *p, int n, double delta);
 levelset_estimate initialize_levelset_estimate(box *, levelset_args);
@@ -98,20 +96,8 @@ int find_parent(box *pb, box_split *ps, int dim) {
   return BOX_SUCCESS;
 }
 
-void print_split(box_split *s) {
-  printf("{");
-  for (int i = 0; i < s->d; i++) {
-    printf("[%d:%d:", i, s->nsplit[i]);
-    for (int j = 0; j < s->nsplit[i]; j++) {
-      int tmp = (s->split[i] & (1 << j)) >> j;
-      printf(" %d", tmp + 1);
-    }
-    printf("] ");
-  }
-  printf("}");
-}
-
-box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la) {
+box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la, 
+		   box_split_info *info) {
   /* Combine two boxes. 
    *
    * Args:
@@ -120,6 +106,7 @@ box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la) {
    *   dim: integer, dimension being combined to create a parent box.
    *   la: levelset_args pointer, holds parameter values for the levelset 
    *     algorithm.
+   *   info: box_split_info pointer.
    * Returns:
    *   pointer to the box containing the combined boxes.
    */
@@ -237,9 +224,9 @@ box_collection *minimax_step(box_collection *src, levelset_args *la) {
    *   pointer to new box_collection, contains boxes found by collapsing this
    *   level of the box_collection.
    */
-  box_collection *dst = new_box_collection(src->d);
+  box_collection *dst = new_box_collection(src->info);
   
-  if (!src->n) 
+  if (!box_collection_size(src)) 
     return dst;
 
   box **arr = list_boxes(src);
@@ -247,7 +234,8 @@ box_collection *minimax_step(box_collection *src, levelset_args *la) {
     /* No boxes in collection, return empty collection. */
     return dst;
   
-  for (int i = 0; i < src->n; i++) {
+  int collection_size = box_collection_size(src);
+  for (int i = 0; i < collection_size; i++) {
     box * cur = arr[i];
     for (int j = 0; j < cur->split->d; j++) {
       /* Skip if this split has already been checked by a sibling box. */
@@ -262,7 +250,10 @@ box_collection *minimax_step(box_collection *src, levelset_args *la) {
       
       /* Find the sibling box and combine this box with it. */
       box *sib = find_box_sibling(src, cur->split, j);
-      box *parent = combine_boxes(cur, sib, j, la);
+      if (sib != NULL) {
+	sib->checked[j] = 1;
+      }
+      box *parent = combine_boxes(cur, sib, j, la, src->info);
       
       /* If the parent box is already in the tree, keep the one with the
 	 lowest risk. */
@@ -303,17 +294,21 @@ levelset_estimate compute_levelset(box_collection *pinitial, levelset_args la) {
 
   box_collection *pc[max_depth];
   pc[0] = pinitial;
+
   /* Calculate all of the costs for the initial boxes. */
-  box_node *node = pc[0]->boxes;
-  while (node) {
-    node->p->risk = levelset_cost(node->p, &la);
-    node = node->next;
+  box **boxes = list_boxes(pc[0]);
+  int boxPos = 0;
+  while (boxes[boxPos]) {
+    boxes[boxPos]->risk = levelset_cost(boxes[boxPos], &la);
+    boxPos++;
   }
+  free(boxes);
   
   /* Collapse levels, one at a time, bottom (most splits) to top (no
      splits). */
-  for (int i = 1; i < max_depth; i++)
+  for (int i = 1; i < max_depth; i++) {
     pc[i] = minimax_step(pc[i - 1], &la);
+  }
   
   levelset_estimate le  = initialize_levelset_estimate(get_first_box(pc[max_depth - 1]),
 						       la);
@@ -377,27 +372,3 @@ levelset_estimate initialize_levelset_estimate(box *p, levelset_args la) {
   return(le);
 }
 
-void print_collection(box_collection *pc) {
-  printf("box collection %d boxes.\n", pc->n);
-  box_node *node = pc->boxes;
-  int i = 0;
-  while (node) {
-    printf("  [%d]: ", i++);
-    print_box(node->p);
-    node = node->next;
-  }
-}
-
-void print_box(box *p) {
-  printf("box: ");
-  print_split(p->split);
-  printf(" points: {");
-  for (int i = 0; i < p->points.n; i++) {
-    printf("%d, ", p->points.i[i]);
-  }
-  printf("} inset: %d terminal_box: %d", p->risk.inset, p->terminal_box);
-  if (!p->terminal_box) {
-    printf(" child[0] = %p child[1] = %p", (void *)p->children[0], (void *)p->children[1]);
-  }
-  printf("\n");
-}

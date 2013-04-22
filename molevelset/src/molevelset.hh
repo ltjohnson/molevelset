@@ -1,7 +1,7 @@
 #ifndef MOLEVELSET_H
 #define MOLEVELSET_H
 
-#include "box.h"
+#include "box.hh"
 
 typedef struct {
   int d;        /* Dimension of X points. */

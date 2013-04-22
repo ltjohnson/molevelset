@@ -1,7 +1,5 @@
 useDynLib(molevelset)
 
-useDynLib(molevelset)
-
 export(molevelset)
 export(box.points)
 export(plot.molevelset)
