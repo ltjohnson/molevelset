@@ -11,12 +11,34 @@ plot.molevelset(le, points=TRUE, combine.boxes=TRUE,
                 col.noninset=NA, border.noninset=NA,
                 col.inset="gray", border.inset="red")
 
+dat <- data.frame(X=X[, 1], Y=X[, 2], Z=Y)
+le.dat <- molevelset(Z ~ X + Y, dat, k.max=k.max, gamma=0.5, rho=0.01)
+
+in.levelset(X, le)
+in.levelset(dat, le.dat)
+
+###########################################################################
+# Circle in the middle, radius 0.25.
+r <- 0.25
+k.max <- 5
+n <- 1000
+X <- matrix(runif(2*n), ncol=2)
+Y <- 1 * (rowSums((X - 0.5)^2) <= r^2) 
+
+system.time(le <- molevelset(X, Y, k.max=k.max, gamma=0.75, rho=0.20))
+plot.molevelset(le, points=TRUE, combine.boxes=TRUE,
+                col.noninset=NA, border.noninset=NA,
+                col.inset="gray", border.inset="red")
+tmp <- in.levelset(X, le)
+text(X[tmp, 1], X[tmp, 2], "L")
+
 
 ###########################################################################
 ## Circle in the upper right example.
-k.max <- 8
+k.max <- 6
 n <- 2**k.max
-X <- expand.grid(seq(0, 1, length.out=n), seq(0, 1, length.out=n))
+x <- seq(0, 1, length.out=n)
+X <- expand.grid(x, x)
 X <- as.matrix(X)
 Y <- ifelse(rowSums((X - 1)^2) <= (0.2 * sqrt(2))^2, 1, 0)
 
