@@ -14,8 +14,8 @@ plot.molevelset(le, points=TRUE, combine.boxes=TRUE,
 dat <- data.frame(X=X[, 1], Y=X[, 2], Z=Y)
 le.dat <- molevelset(Z ~ X + Y, dat, k.max=k.max, gamma=0.5, rho=0.01)
 
-in.levelset(X, le)
-in.levelset(dat, le.dat)
+in.molevelset(X, le)
+in.molevelset(dat, le.dat)
 
 ###########################################################################
 # Circle in the middle, radius 0.25.
@@ -29,7 +29,7 @@ system.time(le <- molevelset(X, Y, k.max=k.max, gamma=0.75, rho=0.20))
 plot.molevelset(le, points=TRUE, combine.boxes=TRUE,
                 col.noninset=NA, border.noninset=NA,
                 col.inset="gray", border.inset="red")
-tmp <- in.levelset(X, le)
+tmp <- in.molevelset(X, le)
 text(X[tmp, 1], X[tmp, 2], "L")
 
 

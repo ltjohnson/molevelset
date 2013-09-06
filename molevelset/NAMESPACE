@@ -1,5 +1,6 @@
 useDynLib(molevelset)
 
+export(in.molevelset)
 export(molevelset)
 export(molevelset.matrix)
 export(plot.molevelset)

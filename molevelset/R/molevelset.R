@@ -1,3 +1,4 @@
+
 molevelset <- function(X, Y, gamma, k.max, delta=0.05, rho=0.05) {
   cl <- match.call()
 
@@ -35,7 +36,7 @@ molevelset.formula <- function(formula, data, gamma, k.max=3, delta=0.05,
   Y <- as.numeric(Y)
 
   X <- m[as.character(attr(terms, "term.labels"))]
-  if (any(sapply(X.orig, is.numeric) == FALSE)) {
+  if (!all(sapply(X, is.numeric))) {
     stop("molevelset can only handle numeric predictors.")
   }
 
@@ -80,40 +81,40 @@ molevelset.matrix <- function(X, Y, gamma, k.max=3, delta=0.05, rho=0.05) {
   return(le)
 }
 
-in.levelset <- function(X, levelset.estimate) {
+in.molevelset <- function(X, levelset.estimate) {
   switch(levelset.estimate$method,
-         formula=in.levelset.formula(X, levelset.estimate),
-         matrix=in.levelset.matrix(X, levelset.estimate))
+         formula=in.molevelset.formula(X, levelset.estimate),
+         matrix=in.molevelset.matrix(X, levelset.estimate))
 }
 
-.in.levelset.inner.formula <- function(x, bounds) {
+.in.molevelset.inner.formula <- function(x, bounds) {
   tmp <- lapply(names(bounds), function(nm)
                 x[[nm]] > bounds[[nm]][, 1] &
                 x[[nm]] <= bounds[[nm]][, 2])
   any(do.call("&", tmp))
 }
 
-.in.levelset.inner.matrix <- function(x, bounds) {
+.in.molevelset.inner.matrix <- function(x, bounds) {
   tmp <- lapply(seq_len(ncol(x)), function(i)
                 x[, i] > bounds[[i]][, 1] &
                 x[, i] <= bounds[[i]][, 2])
   any(do.call("&", tmp))
 }
 
-in.levelset.formula <- function(X, levelset.estimate) {
+in.molevelset.formula <- function(X, levelset.estimate) {
   X.names <- levelset.estimate$X.names
   if (!is.data.frame(X) || any(!(X.names %in% names(X)))) {
-    stop("X must be a data.frame with containing at least the",
-         " same columns used in the formula.")
+    stop("X must be a data.frame containing the same columns used in the ",
+         "formula.")
   }
   in.box <-
     sapply(seq_len(nrow(X)), function(i)
-           .in.levelset.inner.formula(X[i, , drop=FALSE],
-                                      levelset.estimate$inset_checks))
+           .in.molevelset.inner.formula(X[i, , drop=FALSE],
+                                        levelset.estimate$inset_checks))
   return(in.box)
 }
 
-in.levelset.matrix <- function(X, levelset.estimate) {
+in.molevelset.matrix <- function(X, levelset.estimate) {
   X.names <- levelset.estimate$X.names
   if (!is.matrix(X) ||
       (is.null(colnames(X)) && ncol(X) != length(X.names)) ||
