@@ -18,7 +18,7 @@ extern "C" {
     }
   
     if (LENGTH(k_max) != 1 || TYPEOF(k_max) != INTSXP) {
-      error("k_max must be a scalar integer.");
+      error("k_max must be an integer of length 1.");
     }
   
     pc = points_to_boxes(REAL(X), INTEGER(dim)[0], INTEGER(dim)[1], 
@@ -46,8 +46,6 @@ extern "C" {
      * 
      * Args:
      *   p: pointer to box to convert.
-     *   px: pointer to coordinates of the points in the box.
-     *   n: total number of points.
      * Returns:
      *   list containing: 
      *     'i' - indexes of points in the box (1-relative).
@@ -78,7 +76,7 @@ extern "C" {
     for (int i = 0; i < p->split->d; i++) {
       /* This could be changed to copy out "Left" and "Right" instead of 1
        *  and 2. 
-     */
+       */
       PROTECT(tmp_splits = allocVector(INTSXP, p->split->nsplit[i]));
       for (int j = 0; j < p->split->nsplit[i]; j++) {
 	INTEGER(tmp_splits)[j] = 
@@ -177,7 +175,8 @@ extern "C" {
     la.rho   = REAL(rho)[0];
 
     /* Bucket everything up into a box collection. */
-    levelset_estimate le = compute_levelset(points_to_boxes(la.x, la.n, la.d, la.kmax),
+    levelset_estimate le = compute_levelset(points_to_boxes(la.x, la.n, la.d, 
+							    la.kmax),
 					    la);
 
     /* Make return list, has total cost, number of boxes left, a list for inset boxes, and a 

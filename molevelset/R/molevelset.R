@@ -1,26 +1,19 @@
 
 molevelset <- function(X, Y, gamma, k.max, delta=0.05, rho=0.05) {
-  cl <- match.call()
-
-  if (class(X) == "formula") {
-    levelset.estimate <-
-      molevelset.formula(formula=X, data=Y, gamma=gamma, k.max=k.max,
-                         delta=delta, rho=rho)
-  } else if (is.matrix(X)) {
-    levelset.estimate <-
-      molevelset.matrix(X=X, Y=Y, gamma=gamma, k.max=k.max, delta=delta,
-                        rho=rho)
-  }
-
-  levelset.estimate$call <- cl
-  
-  return(levelset.estimate)
+    cl <- match.call()
+    ret <- UseMethod("molevelset")
+    ret$call <- cl
+    class(ret) <- "molevelset"
+    return(ret)
 }
 
-molevelset.formula <- function(formula, data, gamma, k.max=3, delta=0.05,
+molevelset.default <- function(X, Y, gamma, k.max, delta=0.05, rho=0.05) {
+    stop("X has unsupported class ", class(x), ".")
+}
+
+molevelset.formula <- function(X, Y, gamma, k.max=3, delta=0.05,
                                rho=0.05) {
-  cl <- match.call()
-  m <- model.frame(formula, data)
+  m <- model.frame(X, Y)
  
   terms <- attr(m, "terms")
   if (any(attr(terms, "order") > 1)) {
@@ -45,7 +38,6 @@ molevelset.formula <- function(formula, data, gamma, k.max=3, delta=0.05,
   le <- molevelset.matrix(X, Y, gamma, k.max=k.max, delta=delta, rho=rho)
 
   le$method      <- "formula"
-  le$call        <- cl
   le$X           <- NULL
   le$Y           <- NULL
   le$model.frame <- m
@@ -55,10 +47,14 @@ molevelset.formula <- function(formula, data, gamma, k.max=3, delta=0.05,
 
 molevelset.matrix <- function(X, Y, gamma, k.max=3, delta=0.05, rho=0.05) {
   stopifnot(is.matrix(X), is.vector(Y))
-  cl <- match.call()
-  le <- .Call("estimate_levelset", X, Y, as.integer(k.max), gamma, delta, rho)
+
+  le <- .Call("estimate_levelset", X, Y, as.integer(k.max), gamma, delta, rho,
+              PACKAGE="molevelset")
 
   inset_checks <-t(sapply(le$inset_boxes, function(b) t(b$box)))
+  if (!NROW(inset_checks) || !NCOL(inset_checks)) {
+      inset_checks <- matrix(0, ncol=NCOL(X) * 2, nrow=0)
+  }
   n.x <- ncol(X)
   le$inset_checks <-
     lapply(seq_len(n.x), function(i) inset_checks[, c(i, i + n.x), drop=FALSE])
@@ -75,7 +71,6 @@ molevelset.matrix <- function(X, Y, gamma, k.max=3, delta=0.05, rho=0.05) {
   le$gamma  <- gamma
   le$delta  <- delta
   le$rho    <- rho
-  le$call   <- cl
   le$method <- "matrix"
   
   return(le)
@@ -124,7 +119,7 @@ in.molevelset.matrix <- function(X, levelset.estimate) {
   }
   in.box <-
     sapply(seq_len(nrow(X)), function(i)
-           .in.levelset.inner.matrix(X[i, , drop=FALSE],
-                                     levelset.estimate$inset_checks))
+           .in.molevelset.inner.matrix(X[i, , drop=FALSE],
+                                       levelset.estimate$inset_checks))
   return(in.box)
 }

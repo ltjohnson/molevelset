@@ -5,3 +5,5 @@ export(molevelset)
 export(molevelset.matrix)
 export(plot.molevelset)
 
+S3method(molevelset, "matrix")
+S3method(molevelset, "formula")

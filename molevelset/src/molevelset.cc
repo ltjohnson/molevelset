@@ -123,17 +123,28 @@ box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la,
   remove_split(parent_split, dim);
   box *parent = new_box(parent_split, parent_size);
   
-  /* Combine the two boxes. */
-  for (int i = 0; i < p1->points.n; i++) 
+  /* Combine the two boxes.
+   * First, copy the points from p1.
+   */
+  for (int i = 0; i < p1->points.n; i++) {
     add_point(parent, p1->points.i[i]);
-  if (p2) 
-    for (int i = 0; i < p2->points.n; i++)
+  }
+
+  if (p2) {
+    /* If there is a p2, copy those points as well. */
+    for (int i = 0; i < p2->points.n; i++) {
       add_point(parent, p2->points.i[i]);
+    }
+  }
   
   /* Calculate the cost as if the parent box were a terminal node. */
   box_risk parent_risk = levelset_cost(parent, la);
   double existing_risk_cost = 
     p1->risk.risk_cost + (p2 ? p2->risk.risk_cost : 0);
+  /* If treating as a terminal node (aka no splits) results in a lower
+   * risk_cost, use that.  Otherwise, mark the parent node as non-terminal
+   * and add p1 and p2 as children. 
+   */
   if (parent_risk.risk_cost < existing_risk_cost) {
     parent->terminal_box = 1;
     parent->risk = parent_risk;
@@ -171,11 +182,11 @@ double inset_risk(box *p, levelset_args *la) {
   /* Calculate the inset risk for a box.
    *
    * Args:
-   *  p: pointer to box to calculate inset cost of,
+   *  p: pointer to box to calculate inset risk of.
    *  levelset_args: pointer to levelset_args, contains parameters for the 
    *    aglorithm. 
    * Returns:
-   *   double, cost of the box if it is in the set.
+   *   double, risk of the box if it is in the set.
    */
   if (!p->points.n) {
     return 0.0;
@@ -226,47 +237,52 @@ box_collection *minimax_step(box_collection *src, levelset_args *la) {
    */
   box_collection *dst = new_box_collection(src->info);
   
-  if (!box_collection_size(src)) 
+  int collection_size = box_collection_size(src);
+  if (!collection_size) {
     return dst;
+  }
 
   box **arr = list_boxes(src);
-  if (!arr) 
+  if (!arr) {
     /* No boxes in collection, return empty collection. */
     return dst;
+  }
   
-  int collection_size = box_collection_size(src);
   for (int i = 0; i < collection_size; i++) {
     box * cur = arr[i];
-    for (int j = 0; j < cur->split->d; j++) {
+    for (int dim = 0; dim < cur->split->d; dim++) {
       /* Skip if this split has already been checked by a sibling box. */
-      if (cur->checked[j]) 
+      if (cur->checked[dim]) 
 	continue;
       
       /* Skip if there aren't any splits in this dimension. */
-      if (!cur->split->nsplit[j]) {
-	cur->checked[j] = 1;
+      if (!cur->split->nsplit[dim]) {
+	cur->checked[dim] = 1;
 	continue;
       }
       
       /* Find the sibling box and combine this box with it. */
-      box *sib = find_box_sibling(src, cur->split, j);
+      box *sib = find_box_sibling(src, cur->split, dim);
       if (sib != NULL) {
-	sib->checked[j] = 1;
+	sib->checked[dim] = 1;
       }
-      box *parent = combine_boxes(cur, sib, j, la, src->info);
+      box *new_parent = combine_boxes(cur, sib, dim, la, src->info);
       
-      /* If the parent box is already in the tree, keep the one with the
-	 lowest risk. */
-      box *existing_parent = find_box(dst, parent->split);
+      box *existing_parent = find_box(dst, new_parent->split);
       if (existing_parent) {
-	if (existing_parent->risk.risk_cost < parent->risk.risk_cost) {
-	  free_box_but_not_children(parent);
+	/* If cur has an existing_parent in the tree, compare that risk +
+	 * cost to the risk + cost for the new parent and keep whichever
+	 * has the lower risk + cost.
+	 */
+	if (existing_parent->risk.risk_cost <= new_parent->risk.risk_cost) {
+	  free_box_but_not_children(new_parent);
 	} else {
 	  remove_box(dst, existing_parent->split);
-	  add_box(dst, parent);
+	  add_box(dst, new_parent);
 	}
       } else {
-	add_box(dst, parent);
+	/* cur has no existing parent, use new_parent by default. */
+	add_box(dst, new_parent);
       }
     }
   }
@@ -286,7 +302,10 @@ levelset_estimate compute_levelset(box_collection *pinitial, levelset_args la) {
    * Returns:
    *   levelset_estimate struct.
    */
-  la.A = max_vector_fabs(la.y, la.n);
+  /* Note that la.A serves the role of bounding Y in he interval [-A, A].
+   * This bound is still true if we set A = 1 + max_i |Y_i|, and we avoid
+   * division by 0 errors. */
+  la.A = max_vector_fabs(la.y, la.n) + 1.0;
 
   /* Maximum depth of the tree, up to kmax splits in each of the d
      dimensions, plus 1 for no splits. */

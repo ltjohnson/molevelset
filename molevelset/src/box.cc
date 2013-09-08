@@ -741,15 +741,15 @@ void print_collection(box_collection *pc) {
 }
 
 void print_box(box *p) {
+  if (p == NULL) {
+    printf("box: NULL\n");
+    return;
+  }
+
   printf("box: ");
   print_split(p->split);
-  /*
-  printf(" points: {");
-  for (int i = 0; i < p->points.n; i++) {
-    printf("%d, ", p->points.i[i]);
-  }
-  printf("} */
-  printf(" inset: %d terminal_box: %d", p->risk.inset, p->terminal_box);
+  printf(" inset: %d terminal_box: %d points: %d risk_cost: %f", p->risk.inset, 
+	 p->terminal_box, p->points.n, p->risk.risk_cost);
   if (!p->terminal_box) {
     printf(" child[0] = %p child[1] = %p", 
 	   (void *)p->children[0], (void *)p->children[1]);
