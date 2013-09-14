@@ -1,8 +1,8 @@
 #include <R.h>
 #include <Rinternals.h>
 
-#include "box.hh"
-#include "molevelset.hh"
+#include "box.h"
+#include "molevelset.h"
 
 
 extern "C" {

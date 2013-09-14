@@ -4,7 +4,7 @@
 #include <R.h>
 #include <Rinternals.h>
 
-#include "box.hh"
+#include "box.h"
 
 using namespace::std;
 

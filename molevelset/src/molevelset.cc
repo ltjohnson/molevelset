@@ -4,8 +4,8 @@
 #include <R.h>
 #include <Rinternals.h>
 
-#include "box.hh"
-#include "molevelset.hh"
+#include "box.h"
+#include "molevelset.h"
 
 box *combine_boxes(box *p1, box *p2, int dim, levelset_args *, 
 		   box_split_info *);
