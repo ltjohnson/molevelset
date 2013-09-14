@@ -62,8 +62,9 @@ get.levelset.lines <- function(le.boxes, k.max) {
   }
 }
 
-plot.molevelset <- function(le,
-                            which=c("both", "inset", "noninset", "neither"),
+plot.molevelset <- function(x,
+                            point.type=c("both", "inset", "noninset",
+                                "neither"),
                             col.inset="gray",
                             col.noninset="gray55",
                             border.inset="red",
@@ -74,58 +75,60 @@ plot.molevelset <- function(le,
   # Plot a molevelset estimate.
   #
   # Args:
-  #   le: object as returned by moleveset.
+  #   x: object as returned by moleveset.
+  #   point.type: character, which kinds of points to plot.
   #   col.inset: color to use for shading inset boxes.  If "", NA, or NULL
   #     then no shading is done for inset boxes.
-  #   col.noninset: color to use for shading non-inset boxes.  If "", NA, or
-  #     NULL then no shading is done for inset boxes.
+  #   col.noninset: color to use for shading non-inset boxes.  If "", NA,
+  #     or NULL then no shading is done for inset boxes.
   #   border.inset: color to use for borders of inset boxes.  If "", NA, or
   #     NULL then no border is drawn for inset boxes.
-  #   border.noninset: color to use for borders of non-inset boxes.  If "", NA, or
-  #     NULL then no border is drawn for non-inset boxes.
+  #   border.noninset: color to use for borders of non-inset boxes.  If "",
+  #     NA, or NULL then no border is drawn for non-inset boxes.
   #   points: logical, should data points be plotted over the levelset.
   #   ...: additional args passed to plot.
   # Returns:
   #   Nothing.
-  which <- match.arg(which)
+  point.type <- match.arg(point.type)
   
   # Can we let the user specifiy xlab etc if they want to without messing up
   # our empty default?  Possibly by looking for xlab in ... or adding xlab=""
   # to ... if xlab is not allrady in there.
   plot(c(0, 1), c(0, 1), type="n", xlab="", ylab="", ...)
   
-  plot.inset <- which %in% c("both", "inset")
-  plot.noninset <- which %in% c("both", "noninset")
+  plot.inset <- point.type %in% c("both", "inset")
+  plot.noninset <- point.type %in% c("both", "noninset")
 
   if (!combine.boxes) {
     if (plot.inset)
-      .plot.polygons(get.levelset.polygons(le$inset_boxes),
+      .plot.polygons(get.levelset.polygons(x$inset_boxes),
                      border=border.inset,
                      col=col.inset)
     if (plot.noninset) 
-      .plot.polygons(get.levelset.polygons(le$non_inset_boxes),
+      .plot.polygons(get.levelset.polygons(x$non_inset_boxes),
                      border=border.noninset,
                      col=col.noninset)
   } else {
     if (plot.inset && .is.color.specification(col.inset)) 
-      .plot.polygons(get.levelset.polygons(le$inset_boxes),
+      .plot.polygons(get.levelset.polygons(x$inset_boxes),
                      border=NA,
                      col=col.inset)
     if (plot.noninset && .is.color.specification(col.noninset))
-      .plot.polygons(get.levelset.polygons(le$non_inset_boxes),
+      .plot.polygons(get.levelset.polygons(x$non_inset_boxes),
                      border=NA,
                      col=col.noninset)
     if (plot.inset && .is.color.specification(border.inset)) {
-      inset.lines <- get.levelset.lines(le$inset_boxes, le$k.max)
+      inset.lines <- get.levelset.lines(x$inset_boxes, x$k.max)
       for (i in seq_along(inset.lines))
         lines(inset.lines[[i]], col=border.inset)
     }
     if (plot.noninset && .is.color.specification(border.noninset)) {
-      non.inset.lines <- get.levelset.lines(le$non_inset_boxes, le$k.max)
+      non.inset.lines <- get.levelset.lines(x$non_inset_boxes, x$k.max)
       for (i in seq_along(non.inset.lines))
         lines(non.inset.lines[[i]], col=border.noninset)
     }
   }
-  if (points)
-    graphics::points(le$X, col=ifelse(le$Y >= le$gamma, "red", "black"))
+  if (points) {
+      graphics::points(x$X, col=ifelse(x$Y >= x$gamma, "red", "black"))
+  }
 }

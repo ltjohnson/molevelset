@@ -704,10 +704,10 @@ bool BoxSplitKey::operator<(const BoxSplitKey &right) const {
 void BoxSplitKey::print_key() const {
   switch(key_hash_type) {
   case KEY_UNSIGNED_LONG_LONG:
-    printf("%llu", lkey);
+    Rprintf("%llu", lkey);
     break;
   case KEY_STRING:
-    printf("%s", skey.c_str());
+    Rprintf("%s", skey.c_str());
     break;
   default:
     return;
@@ -716,24 +716,24 @@ void BoxSplitKey::print_key() const {
 
 /* Output functions, used for debugging. */
 void print_split(box_split *s) {
-  printf("{");
+  Rprintf("{");
   for (int i = 0; i < s->d; i++) {
-    printf("[%d:%d:", i, s->nsplit[i]);
+    Rprintf("[%d:%d:", i, s->nsplit[i]);
     for (int j = 0; j < s->nsplit[i]; j++) {
       int tmp = (s->split[i] & (1 << j)) >> j;
-      printf(" %d", tmp + 1);
+      Rprintf(" %d", tmp + 1);
     }
-    printf("] ");
+    Rprintf("] ");
   }
-  printf("}");
+  Rprintf("}");
 }
 
 void print_collection(box_collection *pc) {
-  printf("box collection %d boxes.\n", box_collection_size(pc));
+  Rprintf("box collection %d boxes.\n", box_collection_size(pc));
   box **boxes = list_boxes(pc);
   int boxPos = 0;
   while(boxes[boxPos]) {
-    printf("  [%d]: ", boxPos);
+    Rprintf("  [%d]: ", boxPos);
     print_box(boxes[boxPos]);
     boxPos++;
   }
@@ -742,17 +742,17 @@ void print_collection(box_collection *pc) {
 
 void print_box(box *p) {
   if (p == NULL) {
-    printf("box: NULL\n");
+    Rprintf("box: NULL\n");
     return;
   }
 
-  printf("box: ");
+  Rprintf("box: ");
   print_split(p->split);
-  printf(" inset: %d terminal_box: %d points: %d risk_cost: %f", p->risk.inset, 
-	 p->terminal_box, p->points.n, p->risk.risk_cost);
+  Rprintf(" inset: %d terminal_box: %d points: %d risk_cost: %f", 
+	    p->risk.inset, p->terminal_box, p->points.n, p->risk.risk_cost);
   if (!p->terminal_box) {
-    printf(" child[0] = %p child[1] = %p", 
-	   (void *)p->children[0], (void *)p->children[1]);
+    Rprintf(" child[0] = %p child[1] = %p", 
+	    (void *)p->children[0], (void *)p->children[1]);
   }
-  printf("\n");
+  Rprintf("\n");
 }

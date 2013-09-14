@@ -8,7 +8,7 @@ molevelset <- function(X, Y, gamma, k.max, delta=0.05, rho=0.05) {
 }
 
 molevelset.default <- function(X, Y, gamma, k.max, delta=0.05, rho=0.05) {
-    stop("X has unsupported class ", class(x), ".")
+    stop("X has unsupported class ", class(X), ".")
 }
 
 molevelset.formula <- function(X, Y, gamma, k.max=3, delta=0.05,
@@ -47,6 +47,13 @@ molevelset.formula <- function(X, Y, gamma, k.max=3, delta=0.05,
 
 molevelset.matrix <- function(X, Y, gamma, k.max=3, delta=0.05, rho=0.05) {
   stopifnot(is.matrix(X), is.vector(Y))
+
+  transform <- NULL
+  if (any(X < 0 | X > 1)) {
+      transformed <- transform.X(X, k.max)
+      transform <- transformed$transform
+      X <- transformed$X
+  }
 
   le <- .Call("estimate_levelset", X, Y, as.integer(k.max), gamma, delta, rho,
               PACKAGE="molevelset")
@@ -122,4 +129,19 @@ in.molevelset.matrix <- function(X, levelset.estimate) {
            .in.molevelset.inner.matrix(X[i, , drop=FALSE],
                                        levelset.estimate$inset_checks))
   return(in.box)
+}
+
+transform.X <- function(X, k.max) {
+    # pick delta for the transformation, we'll preserve aspect ratio.
+    original.range <- max(apply(X, 2, function(col) max(col) - min(col)))
+    target.range <- 1 - 1 / 2^(k.max + 2)
+    original.center <- colMeans(X)
+    transform <- list(original.range=original.range,
+                      target.range=target.range,
+                      original.center=original.center)
+    for (i in seq_len(NCOL(X))) {
+        X[, i] <- 1 / 2 + target.range * (X[, i] - original.center[i]) /
+            original.range
+    }
+    return(list(transform=transform, X=X))
 }
