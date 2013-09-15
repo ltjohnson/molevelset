@@ -1,9 +1,15 @@
 useDynLib(molevelset)
 
 export(in.molevelset)
+
 export(molevelset)
 export(molevelset.matrix)
+export(molevelset.formula)
+
 export(plot.molevelset)
+export(print.molevelset)
+export(summary.molevelset)
+
 
 S3method(molevelset, "matrix")
 S3method(molevelset, "formula")

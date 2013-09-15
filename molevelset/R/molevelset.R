@@ -1,10 +1,5 @@
-
 molevelset <- function(X, Y, gamma, k.max, delta=0.05, rho=0.05) {
-    cl <- match.call()
-    ret <- UseMethod("molevelset")
-    ret$call <- cl
-    class(ret) <- "molevelset"
-    return(ret)
+    UseMethod("molevelset")
 }
 
 molevelset.default <- function(X, Y, gamma, k.max, delta=0.05, rho=0.05) {
@@ -13,6 +8,7 @@ molevelset.default <- function(X, Y, gamma, k.max, delta=0.05, rho=0.05) {
 
 molevelset.formula <- function(X, Y, gamma, k.max=3, delta=0.05,
                                rho=0.05) {
+  cl <- match.call()
   m <- model.frame(X, Y)
  
   terms <- attr(m, "terms")
@@ -41,12 +37,15 @@ molevelset.formula <- function(X, Y, gamma, k.max=3, delta=0.05,
   le$X           <- NULL
   le$Y           <- NULL
   le$model.frame <- m
-
+  le$call        <- cl
+  class(le)      <- "molevelset"
+    
   return(le)
 }
 
 molevelset.matrix <- function(X, Y, gamma, k.max=3, delta=0.05, rho=0.05) {
   stopifnot(is.matrix(X), is.vector(Y))
+  cl <- match.call()
 
   transform <- NULL
   if (any(X < 0 | X > 1)) {
@@ -79,11 +78,13 @@ molevelset.matrix <- function(X, Y, gamma, k.max=3, delta=0.05, rho=0.05) {
   le$delta  <- delta
   le$rho    <- rho
   le$method <- "matrix"
+  le$call   <- cl
+  class(le) <- "molevelset"
   
   return(le)
 }
 
-in.molevelset <- function(X, levelset.estimate) {
+in.molevelset <- function(levelset.estimate, X) {
   switch(levelset.estimate$method,
          formula=in.molevelset.formula(X, levelset.estimate),
          matrix=in.molevelset.matrix(X, levelset.estimate))

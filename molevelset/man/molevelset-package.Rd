@@ -1,43 +1,34 @@
 \name{molevelset-package}
 \alias{molevelset-package}
-\alias{molevelset}
 \docType{package}
 \title{
-What the package does (short line)
-~~ package title ~~
+  Mini-max Optimal Levelsets
 }
 \description{
-More about what it does (maybe more than one line)
-~~ A concise (1-5 lines) description of the package ~~
+  Estimates mini-max optimal levelsets.
 }
 \details{
 \tabular{ll}{
 Package: \tab molevelset\cr
 Type: \tab Package\cr
 Version: \tab 1.0\cr
-Date: \tab 2010-07-08\cr
-License: \tab What license is it under?\cr
+Date: \tab 2013-09-14\cr
+License: \tab GPL-2\cr
 LazyLoad: \tab yes\cr
 }
-~~ An overview of how to use the package, including the most important ~~
-~~ functions ~~
 }
 \author{
-Who wrote it
-
-Maintainer: Who to complain to <yourfault@somewhere.net>
-~~ The author and/or maintainer of the package ~~
+Leif Johnson <leif.t.johnson@gmail.com>
 }
 \references{
-~~ Literature or other references for background information ~~
+  Willet and Nowak (2007) "Minimax Optimal Level Set Estimation."
+  \emph{IEEE Transactions on Image Processing}, \bold{16}, 2965--2979.
 }
-~~ Optionally other standard keywords, one per line, from file KEYWORDS in ~~
-~~ the R documentation directory ~~
 \keyword{ package }
-\seealso{
-~~ Optional links to other man pages, e.g. ~~
-~~ \code{\link[<pkg>:<pkg>-package]{<pkg>}} ~~
-}
 \examples{
-~~ simple examples of the most important functions ~~
+X <- matrix(runif(100), ncol=2)
+Y <- 0.5 * ((X[, 1] - 0.5)^2 + (X[, 2])^2 < 0.25^2)
+Y <- Y + (runif(length(Y)) - 0.5)
+levelset.estimate <- molevelset(X, Y, 0.4, 4)
+\dontrun{plot(levelset.estimate)}
 }
