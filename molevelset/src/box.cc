@@ -184,7 +184,7 @@ box_collection *new_box_collection(box_split_info *info) {
    *   pointer to new collection.
    */
   box_collection *p = (box_collection *)malloc(sizeof(box_collection));
-  p->info = info;
+  p->info = copy_box_split_info(info);
   p->h = new map<BoxSplitKey, box *>;
   
   return p;
@@ -214,6 +214,7 @@ box_collection *points_to_boxes(double *px, int n, int d, int k_max) {
   }
 
   p_collection = new_box_collection(info);
+  free_box_split_info(info);
   
   for(i = 0; i < n; i++) {
     for(j = 0; j < d; j++) {
@@ -395,7 +396,7 @@ box *get_first_box(box_collection *p) {
   return it == p->h->end() ? NULL : it->second;
 }
 
-void free_collection(box_collection *p) {
+void free_box_collection(box_collection *p) {
   /* Free a box collection, all boxes are free-ed.
    *
    * Args:
@@ -412,6 +413,7 @@ void free_collection(box_collection *p) {
   }
   
   delete p->h;
+  free_box_split_info(p->info);
   free(p);
 }
 
@@ -608,12 +610,25 @@ box **get_terminal_boxes(box *p) {
 }
 
 box_split_info *new_box_split_info(int d, int kmax) {
-  /*  */
   box_split_info *info = (box_split_info *)malloc(sizeof(box_split_info));
   info->d = d;
   info->kmax = kmax;
   info->key_hash_type = box_split_key_hash_type(d, kmax);
   return info;
+}
+
+void free_box_split_info(box_split_info *info) {
+  free(info);
+}
+
+box_split_info * copy_box_split_info(box_split_info *src) {
+  box_split_info *dst = (box_split_info *)malloc(sizeof(box_split_info));
+
+  dst->d             = src->d;
+  dst->kmax          = src->kmax;
+  dst->key_hash_type = src->key_hash_type;
+
+  return dst;
 }
 
 BoxSplitKey::BoxSplitKey() {

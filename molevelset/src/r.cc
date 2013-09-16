@@ -34,7 +34,7 @@ extern "C" {
     }
     free(boxes);
   
-    free_collection(pc);
+    free_box_collection(pc);
 
     UNPROTECT(2);
 

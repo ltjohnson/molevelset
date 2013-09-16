@@ -81,12 +81,12 @@ box_collection *points_to_boxes(double *px, int n, int d, int k_max);
 
 /* Functions for working with collections. */
 box_collection *new_box_collection(box_split_info *);
+void free_box_collection(box_collection *);
 int add_box(box_collection *, box *);
 int remove_box(box_collection *, box_split *split);
 int box_collection_size(box_collection *);
 box *find_box(box_collection *, box_split *split);
 box *find_box_sibling(box_collection *, box_split *, int);
-void free_collection(box_collection *);
 box *get_first_box(box_collection *);
 box **list_boxes(box_collection *src);
 
@@ -103,6 +103,7 @@ box_split *new_box_split(int d);
 /* Box split info functions. */
 int box_split_key_hash_type(int d, int kmax);
 box_split_info *new_box_split_info(int d, int kmax);
+box_split_info *copy_box_split_info(box_split_info *);
 void free_box_split_info(box_split_info *);
 
 /* Functions for working with boxes. */

@@ -124,6 +124,7 @@ box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la,
   box_split *parent_split = copy_box_split(p1->split);
   remove_split(parent_split, dim);
   box *parent = new_box(parent_split);
+  free_box_split(parent_split);
   
   /* Combine the two boxes.
    * First, copy the points from p1.
@@ -341,7 +342,7 @@ levelset_estimate compute_levelset(box_collection *pinitial, levelset_args la) {
    * contained in exactly one collection in pc.  So we just go through all
    * of the collections and free boxes at each level.  */
   for (int i = 0; i < max_depth; i++) 
-    free_collection(pc[i]);
+    free_box_collection(pc[i]);
   
   return le;
 }
