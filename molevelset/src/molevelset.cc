@@ -7,6 +7,8 @@
 #include "box.h"
 #include "molevelset.h"
 
+using std::vector;
+
 box *combine_boxes(box *p1, box *p2, int dim, levelset_args *, 
 		   box_split_info *);
 double inset_risk(box *p, levelset_args *);
@@ -118,23 +120,23 @@ box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la,
   } 
   
   /* Make parent box. */
-  int parent_size = p1->points.n + (p2 ? p2->points.n : 0);
+  
   box_split *parent_split = copy_box_split(p1->split);
   remove_split(parent_split, dim);
-  box *parent = new_box(parent_split, parent_size);
+  box *parent = new_box(parent_split);
   
   /* Combine the two boxes.
    * First, copy the points from p1.
    */
-  for (int i = 0; i < p1->points.n; i++) {
-    add_point(parent, p1->points.i[i]);
+  int n_points1 = p1->points->size();
+  int n_points2 = p2 ? p2->points->size() : 0;
+  int parent_size = n_points1 + n_points2;
+  parent->points->reserve(parent_size);
+  for (int i = 0; i < n_points1; i++) {
+    add_point(parent, p1->points->at(i));
   }
-
-  if (p2) {
-    /* If there is a p2, copy those points as well. */
-    for (int i = 0; i < p2->points.n; i++) {
-      add_point(parent, p2->points.i[i]);
-    }
+  for (int i = 0; i < n_points2; i++) {
+    add_point(parent, p2->points->at(i));
   }
   
   /* Calculate the cost as if the parent box were a terminal node. */
@@ -147,7 +149,7 @@ box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la,
    */
   if (parent_risk.risk_cost < existing_risk_cost) {
     parent->terminal_box = 1;
-    parent->risk = parent_risk;
+    parent->risk         = parent_risk;
   } else {
     parent->terminal_box   = 0;
     parent->risk.risk_cost = existing_risk_cost;
@@ -188,13 +190,15 @@ double inset_risk(box *p, levelset_args *la) {
    * Returns:
    *   double, risk of the box if it is in the set.
    */
-  if (!p->points.n) {
+  const vector<int> *points = p->points;
+  int n_points = points->size();
+  if (!n_points) {
     return 0.0;
   }
 
   double risk = 0.0;
-  for (int i = 0; i < p->points.n; i++)
-    risk += la->gamma - la->y[p->points.i[i]];
+  for (int i = 0; i < n_points; i++)
+    risk += la->gamma - la->y[points->at(i)];
   
   return risk / (2 * la->A);
 }
@@ -218,7 +222,7 @@ double complexity_penalty(box *p, int n, double delta) {
   }
   double L = tree_level * (log2(p->split->d) + 2) + 1;
 
-  double phat = ((double) p->points.n) / n;
+  double phat = ((double) p->points->size()) / n;
   double pl = (L * log(2) + log(1 / delta)) / n;
   pl = 4 * (pl > phat ? pl : phat);
   

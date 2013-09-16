@@ -12,22 +12,17 @@ using namespace::std;
 unsigned int point_to_split(double *px, int d, int k_max);
 void point_to_box(double *px, int d, int k_max, unsigned int *pbox);
 
-box *new_box(box_split *split, int size_guess) {
+box *new_box(box_split *split) {
   /* Create and initialize a new box. 
    *
    * Args:
    *   split: split to create.
-   *   size_guess: callers guess at number of points to expect.
-   *     Numbers smaller than 1 are replaced with 1.
    * Returns:
    *   pointer to initialized box struct.
    */
   int j;
   box *p;
 
-  /* Don't take a size_guess < 1. */
-  size_guess = 1 > size_guess ? 1 : size_guess;
-  
   p = (box *)malloc(sizeof(box));
   p->split = copy_box_split(split);
 
@@ -37,9 +32,7 @@ box *new_box(box_split *split, int size_guess) {
   /* Boxes default to terminal because they don't have children. */
   p->terminal_box = 1;
 
-  p->points.n = 0;
-  p->points.isize = size_guess;
-  p->points.i = (int *)malloc(sizeof(int) * size_guess);
+  p->points = new vector<int>;
 
   p->risk.calculated = 0;
   p->risk.inset = -1;
@@ -59,11 +52,7 @@ box * copy_box(box *src) {
   box *dst = (box *)malloc(sizeof(box));
   dst->split = copy_box_split(src->split);
 
-  dst->points.n = src->points.n;
-
-  dst->points.isize = src->points.isize;
-  dst->points.i = (int *)malloc(sizeof(int) * dst->points.isize);
-  memcpy(dst->points.i, src->points.i, sizeof(int) * dst->points.isize);
+  dst->points = new vector<int>(*(src->points));
 
   dst->checked = (int *)malloc(sizeof(int) * dst->split->d);
   memcpy(dst->checked, src->checked, sizeof(int) * dst->split->d);
@@ -81,7 +70,7 @@ void free_box_but_not_children(box *p) {
    */
   free_box_split(p->split);
   free(p->checked);
-  free(p->points.i);
+  delete p->points;
   free(p);
 }
 
@@ -92,20 +81,7 @@ void add_point(box *p, int i) {
    *   p: pointer to box.
    *   i: index of point to add.
    */
-  box_points *points = &p->points;
-  if (points->n >= points->isize) {
-    /* Increase size of array. */
-    int j, new_size, *new_array;
-    new_size = points->isize > 0 ? 2 * points->isize : 1;
-    new_array = (int *)malloc(sizeof(int) * new_size);
-    for (j = 0; j < points->n; j++) 
-      new_array[j] = points->i[j];
-    if (points->i)
-      free(points->i);
-    points->i = new_array;
-  }
-
-  points->i[points->n++] = i;
+  p->points->push_back(i);
 }
 
 int compare_splits(box_split *ps1, box_split *ps2) {
@@ -248,7 +224,7 @@ box_collection *points_to_boxes(double *px, int n, int d, int k_max) {
 
     cur_box = find_box(p_collection, p_split);
     if (!cur_box) {
-      cur_box = new_box(p_split, 1 + (n - i) / 4);
+      cur_box = new_box(p_split);
       add_box(p_collection, cur_box);
     }
 
@@ -749,7 +725,7 @@ void print_box(box *p) {
   Rprintf("box: ");
   print_split(p->split);
   Rprintf(" inset: %d terminal_box: %d points: %d risk_cost: %f", 
-	    p->risk.inset, p->terminal_box, p->points.n, p->risk.risk_cost);
+	  p->risk.inset, p->terminal_box, p->points->size(), p->risk.risk_cost);
   if (!p->terminal_box) {
     Rprintf(" child[0] = %p child[1] = %p", 
 	    (void *)p->children[0], (void *)p->children[1]);

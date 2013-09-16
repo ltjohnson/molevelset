@@ -4,6 +4,7 @@
 #include "box.h"
 #include "molevelset.h"
 
+using std::vector;
 
 extern "C" {
   SEXP box_to_list(box *p);
@@ -64,9 +65,11 @@ extern "C" {
     UNPROTECT(1);
 
     /* Copy the indexes of the points in this box to box$i. */
-    PROTECT(box_i = allocVector(INTSXP, p->points.n));
-    for (int i = 0; i < p->points.n; i++) {
-      INTEGER(box_i)[i] = p->points.i[i] + 1; /* Convert to 1-relative for R. */
+    int n_points = p->points->size();
+    PROTECT(box_i = allocVector(INTSXP, n_points));
+    for (int i = 0; i < n_points; i++) {
+      /* Convert points to 1-relative for R. */
+      INTEGER(box_i)[i] = p->points->at(i) + 1;
     }
     SET_VECTOR_ELT(box_list, 0, box_i);
     UNPROTECT(1);

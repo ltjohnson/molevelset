@@ -3,6 +3,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 #define MAX_SPLITS 31 
 #define LEFT_SPLIT 0
@@ -54,17 +55,12 @@ typedef struct {
   double risk_cost;     /* risk + cost for this box. */
 } box_risk;
 
-typedef struct {
-  int n;             /* Number of points in this box. */
-  int *i;            /* Indexes of the points. */
-  int isize;         /* Size of i array. */
-} box_points;
-
 typedef struct box {
   box_split *split;  /* Split for this box. */
   int *checked;      /* Has collapsing a split in this dimension been
 			checked. */
-  box_points points; /* Points for this box. */
+  std::vector<int> *points; 
+                     /* Points for this box. */
   int terminal_box;  /* Is this a terminal box, or does it have children
 			boxes?. */
   struct box *children[2];  /* Children boxes. */
@@ -111,7 +107,7 @@ void free_box_split_info(box_split_info *);
 
 /* Functions for working with boxes. */
 void free_box_but_not_children(box *);
-box *new_box(box_split *, int);
+box *new_box(box_split *);
 void add_point(box *, int);
 box *copy_box(box *);
 box **get_terminal_boxes(box *);
