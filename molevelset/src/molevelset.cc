@@ -120,7 +120,6 @@ box *combine_boxes(box *p1, box *p2, int dim, levelset_args *la,
   } 
   
   /* Make parent box. */
-  
   box_split *parent_split = copy_box_split(p1->split);
   remove_split(parent_split, dim);
   box *parent = new_box(parent_split);
@@ -198,8 +197,9 @@ double inset_risk(box *p, levelset_args *la) {
   }
 
   double risk = 0.0;
-  for (int i = 0; i < n_points; i++)
+  for (int i = 0; i < n_points; i++) {
     risk += la->gamma - la->y[points->at(i)];
+  }
   
   return risk / (2 * la->A);
 }
