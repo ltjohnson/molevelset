@@ -118,3 +118,18 @@ plot.molevelset(le)
 abline(0, 1, lwd=3, lty=2)
 
 plot.molevelset(le, combine.boxes=TRUE)
+
+########################################################
+# Offset example:
+X <- 2 + matrix(runif(100), ncol=2)
+Y <- 1 * (X[, 1] > 2.5 & X[, 2] > 2.5)
+le <- molevelset(X, Y, gamma=0.5, k.max=3, rho=0)
+plot(le)
+
+X <- 2 + matrix(runif(100), ncol=2)
+Y <- 1 * (X[, 2] > 2.5)
+le <- molevelset(X, Y, gamma=0.5, k.max=3, rho=0.10)
+plot(le)
+
+in.molevelset(le, cbind(c(2.25, 2.25, 2.75, 2.75),
+                        c(2.25, 2.75, 2.75, 2.25))

@@ -10,7 +10,7 @@ molevelset.formula <- function(X, Y, gamma, k.max=3, delta=0.05,
                                rho=0.05) {
   cl <- match.call()
   m <- model.frame(X, Y)
- 
+
   terms <- attr(m, "terms")
   if (any(attr(terms, "order") > 1)) {
     stop("molevelset cannot handle interaction terms.")
@@ -47,17 +47,27 @@ molevelset.matrix <- function(X, Y, gamma, k.max=3, delta=0.05, rho=0.05) {
   stopifnot(is.matrix(X), is.vector(Y))
   cl <- match.call()
 
-  transform <- NULL
-  if (any(X < 0 | X > 1)) {
-      transformed <- transform.X(X, k.max)
-      transform <- transformed$transform
-      X <- transformed$X
+  transform <- transform.X(X, k.max)
+  X.transformed <- transform$X
+
+  le <- .Call("estimate_levelset", X.transformed, Y, as.integer(k.max), gamma,
+              delta, rho, PACKAGE="molevelset")
+
+  for (i in seq_along(le$inset_boxes)) {
+      le$inset_boxes[[i]]$box <-
+          inverse.transform.X(le$inset_boxes[[i]]$box,
+                              transform$transform)
   }
 
-  le <- .Call("estimate_levelset", X, Y, as.integer(k.max), gamma, delta, rho,
-              PACKAGE="molevelset")
+  for (i in seq_along(le$non_inset_boxes)) {
+      le$non_inset_boxes[[i]]$box <-
+          inverse.transform.X(le$non_inset_boxes[[i]]$box,
+                              transform$transform)
+  }
 
-  inset_checks <-t(sapply(le$inset_boxes, function(b) t(b$box)))
+  inset_checks <-
+      t(sapply(le$inset_boxes, function(b) t(b$box)))
+  
   if (!NROW(inset_checks) || !NCOL(inset_checks)) {
       inset_checks <- matrix(0, ncol=NCOL(X) * 2, nrow=0)
   }
@@ -130,19 +140,4 @@ in.molevelset.matrix <- function(X, levelset.estimate) {
            .in.molevelset.inner.matrix(X[i, , drop=FALSE],
                                        levelset.estimate$inset_checks))
   return(in.box)
-}
-
-transform.X <- function(X, k.max) {
-    # pick delta for the transformation, we'll preserve aspect ratio.
-    original.range <- max(apply(X, 2, function(col) max(col) - min(col)))
-    target.range <- 1 - 1 / 2^(k.max + 2)
-    original.center <- colMeans(X)
-    transform <- list(original.range=original.range,
-                      target.range=target.range,
-                      original.center=original.center)
-    for (i in seq_len(NCOL(X))) {
-        X[, i] <- 1 / 2 + target.range * (X[, i] - original.center[i]) /
-            original.range
-    }
-    return(list(transform=transform, X=X))
 }
