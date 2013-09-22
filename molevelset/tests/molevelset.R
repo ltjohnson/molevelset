@@ -98,6 +98,21 @@ TestInsetFormula <- function() {
     return(TRUE)
 }
 
+TestNotZeroOneLevelset <- function() {
+    X <- cbind(c(3, 3, 4, 4),
+               c(3, 4, 4, 3))
+    Y <- c(0, 1, 1, 0)
+    le <- molevelset(X, Y, gamma=0.5, k.max=1, rho=0)
+
+    stopifnot(length(le$inset_boxes) == 2,
+              length(le$non_inset_boxes) == 2)
+
+    expected <- c(FALSE, TRUE, TRUE, FALSE)
+    stopifnot(identical(expected, in.molevelset(le, X)))
+
+    return(TRUE)
+}
+
 test.names <- ls(pattern="^Test.*")
 test.functions <- lapply(test.names, get)
 test.i <- which(sapply(test.functions, class) == "function")
