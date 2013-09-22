@@ -12,11 +12,10 @@ get.box.polygons <- function(boxes) {
   return(polygons)                                       
 }
 
-.expand.lines <- function(lines, grid.values) {
+.expand.lines <- function(lines) {
     # Args:
     #   lines: numeric n x 3 matrix, col1 = line endpoint 1, col2 = line
     #     endpoint 2, col3 = other dimension value.
-    #   grid.values: numeric vector of grid points.
     # Returns:
     #   m x 3 matrix, having the same column names as lines.  Each row in
     #   lines will correspond to 1 or more rows in the return matrix.  The
@@ -26,7 +25,7 @@ get.box.polygons <- function(boxes) {
     #   of gridpoints in the interior of the line segment.  Each new row
     #   will have the original col3 value.
 
-    grid.values <- sort(unique(grid.values))
+    grid.values <- sort(unique(c(lines[, 1], lines[, 2])))
 
     mat <- cbind(pmin(lines[, 1], lines[, 2]),
                  pmax(lines[, 1], lines[, 2]))
@@ -66,7 +65,7 @@ get.box.polygons <- function(boxes) {
         return(lines.mat)
     }
     lines.dup.i <- c(lines.dup.i, lines.dup.i - 1)
-    return(lines.mat[-lines.dup.i, ])
+    return(lines.mat[-lines.dup.i, , drop=FALSE])
 }
 
 .get.levelset.lines.2d <- function(boxes) {
@@ -77,26 +76,21 @@ get.box.polygons <- function(boxes) {
     n.dim <- 2
 
     # Get possible values for all (both) dimensions.
-    values <- lapply(seq_len(n.dim),
-                     function(dim) lapply(boxes, function(b) b[, dim]))
-    values <- lapply(values, function(v) sort(unique(unlist(v))))
-
     x.lines <- lapply(boxes,
                       function(b) cbind(X1=b[1, 1], X2=b[2, 1], Y=b[, 2]))
     x.lines <- do.call(rbind, x.lines)
-    x.lines <- .expand.lines(x.lines, values[[1]])
+    x.lines <- .expand.lines(x.lines)
     x.lines <- .get.unique.lines(x.lines)
     x.lines <- lapply(seq_len(nrow(x.lines)),
-                      function(i) cbind(x.lines[i, 1:2], x.lines[i, 3]))
-    
-    
+                      function(i) unname(cbind(x.lines[i, 1:2], x.lines[i, 3])))
+        
     y.lines <- lapply(boxes,
                       function(b) cbind(Y1=b[1, 2], Y2=b[2, 2], X=b[, 1]))
     y.lines <- do.call(rbind, y.lines)
-    y.lines <- .expand.lines(y.lines, values[[2]])
+    y.lines <- .expand.lines(y.lines)
     y.lines <- .get.unique.lines(y.lines)
     y.lines <- lapply(seq_len(nrow(y.lines)),
-                      function(i) cbind(y.lines[i, 3], y.lines[i, 1:2]))
+                      function(i) unname(cbind(y.lines[i, 3], y.lines[i, 1:2])))
 
     return(c(x.lines, y.lines))
 }

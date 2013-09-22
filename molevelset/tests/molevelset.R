@@ -66,7 +66,7 @@ TestIValues <- function() {
     stopifnot(identical(le$num_boxes, 1),
               identical(sort(unlist(lapply(le$inset_boxes, "[[", "i"))),
                         seq_len(NROW(X))),
-              sum(0.5 - Y) / 2 / (max(abs(Y)) + 1)))
+              identical(le$total_cost, sum(0.5 - Y) / 2 / (max(abs(Y)) + 1)))
     return(TRUE)
 }
 
