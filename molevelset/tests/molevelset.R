@@ -70,6 +70,34 @@ TestIValues <- function() {
     return(TRUE)
 }
 
+TestInsetMatrix <- function() {
+    X <- cbind(c(0.25, 0.25, 0.75, 0.75),
+               c(0.25, 0.75, 0.75, 0.25))
+    Y <- c(0, 1, 1, 0)
+    le <- molevelset(X, Y, gamma=0.5, k.max=1, rho=0)
+
+    X.test <- cbind(c(0.33, 0.4, 0.7, 0.9),
+                    c(0.1, 0.7, 0.66, 0.2))
+    expected <- c(FALSE, TRUE, TRUE, FALSE)
+    stopifnot(identical(expected, in.molevelset(le, X.test)))
+
+    return(TRUE)
+}
+
+TestInsetFormula <- function() {
+    X <- data.frame(X=c(0.25, 0.25, 0.75, 0.75),
+                    Y=c(0.25, 0.75, 0.75, 0.25),
+                    Z=c(0, 1, 1, 0))
+    le <- molevelset(Z ~ X + Y, X, gamma=0.5, k.max=1, rho=0)
+
+    X.test <- data.frame(X=c(0.33, 0.4, 0.7, 0.9),
+                         Y=c(0.1, 0.7, 0.66, 0.2))
+    expected <- c(FALSE, TRUE, TRUE, FALSE)
+    stopifnot(identical(expected, in.molevelset(le, X.test)))
+
+    return(TRUE)
+}
+
 test.names <- ls(pattern="^Test.*")
 test.functions <- lapply(test.names, get)
 test.i <- which(sapply(test.functions, class) == "function")
