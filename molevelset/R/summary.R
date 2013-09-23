@@ -1,7 +1,6 @@
 summary.molevelset <- function(object, ...) {
     stopifnot(class(object) == "molevelset")
-    summary.list <- list(total_cost=object$total_cost,
-                         gamma=object$gamma,
+    summary.list <- list(gamma=object$gamma,
                          k.max=object$k.max,
                          rho=object$rho,
                          delta=object$delta,
@@ -9,7 +8,7 @@ summary.molevelset <- function(object, ...) {
                          num.boxes=object$num_boxes,
                          num.inset.boxes=length(object$inset_boxes),
                          num.non.inset.boxes=length(object$non_inset_boxes),
-                         num.points=NROW(le$X))
+                         num.points=NROW(object$X))
     column.width <- 20
     summary.string <- paste0(
         "molevelset estimate base on ", summary.list$num.points,
@@ -51,13 +50,13 @@ print.molevelset <- function(x, ...) {
     stopifnot(class(x) == "molevelset")
     print.string <-
         paste0("molevelset estimate based on ",
-               NROW(le$X),
+               NROW(x$X),
                " points.\n  Total Cost: ",
-               round(le$total_cost, 3),
+               round(x$total_cost, 3),
                ".\n  ",
-               length(le$inset_boxes),
+               length(x$inset_boxes),
                " / ",
-               le$num_boxes,
+               x$num_boxes,
                " final boxes in the set.")
     cat(print.string, "\n", sep="")
     return(invisible(print.string))

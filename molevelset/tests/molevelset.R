@@ -12,15 +12,15 @@ TestEmptyLevelSet <- function() {
     le <- molevelset(X, Y, k.max=k.max, gamma=0.50, rho=10)
     stopifnot(length(le$inset_boxes) == 0,
               length(le$non_inset_boxes) == 1,
-              identical(sort(le$non_inset_boxes[[1]]$i),
-                        seq_len(NROW(X))))
+              isTRUE(all.equal(sort(le$non_inset_boxes[[1]]$i),
+                               seq_len(NROW(X)))))
     
     Y <- rep(1, n)
     le <- molevelset(X, Y, k.max=k.max, gamma=0.50, rho=10)
     stopifnot(length(le$inset_boxes) == 1,
               length(le$non_inset_boxes) == 0,
-              identical(sort(le$inset_boxes[[1]]$i),
-                        seq_len(NROW(X))))
+              isTRUE(all.equal(sort(le$inset_boxes[[1]]$i),
+                               seq_len(NROW(X)))))
     
     return(TRUE)
 }
@@ -43,17 +43,17 @@ TestTotalCost <- function() {
     X <- matrix(runif(10), ncol=2)
     Y <- rep(1, nrow(X))
     le <- molevelset(X, Y, gamma=0.5, k.max=0, rho=0)
-    stopifnot(identical(le$total_cost,
-                        sum(0.5 - Y) / 2 / (max(abs(Y)) + 1)),
-              identical(sort(unlist(lapply(le$inset_boxes, "[[", "i"))),
-                        seq_len(NROW(X))))
+    stopifnot(isTRUE(all.equal(le$total_cost,
+                               sum(0.5 - Y) / 2 / (max(abs(Y)) + 1))),
+              isTRUE(all.equal(sort(unlist(lapply(le$inset_boxes, "[[", "i"))),
+                               seq_len(NROW(X)))))
 
     Y <- c(1, 1, 1, 0, 0)
     le <- molevelset(X, Y, gamma=0.5, k.max=0, rho=0)
-    stopifnot(identical(le$total_cost,
-                        sum(0.5 - Y) / 2 / (max(abs(Y)) + 1)),
-              identical(sort(unlist(lapply(le$inset_boxes, "[[", "i"))),
-                        seq_len(NROW(X))))
+    stopifnot(isTRUE(all.equal(le$total_cost,
+                               sum(0.5 - Y) / 2 / (max(abs(Y)) + 1))),
+              isTRUE(all.equal(sort(unlist(lapply(le$inset_boxes, "[[", "i"))),
+                               seq_len(NROW(X)))))
 
     return(TRUE)
 }
@@ -63,10 +63,11 @@ TestIValues <- function() {
     Y <- c(1, 1, 1, 0, 0)
     le <- molevelset(X, Y, gamma=0.5, k.max=0, rho=0)
 
-    stopifnot(identical(le$num_boxes, 1),
-              identical(sort(unlist(lapply(le$inset_boxes, "[[", "i"))),
-                        seq_len(NROW(X))),
-              identical(le$total_cost, sum(0.5 - Y) / 2 / (max(abs(Y)) + 1)))
+    stopifnot(le$num_boxes == 1,
+              isTRUE(all.equal(sort(unlist(lapply(le$inset_boxes, "[[", "i"))),
+                               seq_len(NROW(X)))),
+              isTRUE(all.equal(le$total_cost,
+                               sum(0.5 - Y) / 2 / (max(abs(Y)) + 1))))
     return(TRUE)
 }
 
@@ -79,7 +80,7 @@ TestInsetMatrix <- function() {
     X.test <- cbind(c(0.33, 0.4, 0.7, 0.9),
                     c(0.1, 0.7, 0.66, 0.2))
     expected <- c(FALSE, TRUE, TRUE, FALSE)
-    stopifnot(identical(expected, in.molevelset(le, X.test)))
+    stopifnot(isTRUE(all.equal(expected, in.molevelset(le, X.test))))
 
     return(TRUE)
 }
@@ -93,7 +94,7 @@ TestInsetFormula <- function() {
     X.test <- data.frame(X=c(0.33, 0.4, 0.7, 0.9),
                          Y=c(0.1, 0.7, 0.66, 0.2))
     expected <- c(FALSE, TRUE, TRUE, FALSE)
-    stopifnot(identical(expected, in.molevelset(le, X.test)))
+    stopifnot(isTRUE(all.equal(expected, in.molevelset(le, X.test))))
 
     return(TRUE)
 }
@@ -108,7 +109,7 @@ TestNotZeroOneLevelset <- function() {
               length(le$non_inset_boxes) == 2)
 
     expected <- c(FALSE, TRUE, TRUE, FALSE)
-    stopifnot(identical(expected, in.molevelset(le, X)))
+    stopifnot(isTRUE(all.equal(expected, in.molevelset(le, X))))
 
     return(TRUE)
 }
