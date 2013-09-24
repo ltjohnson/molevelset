@@ -1,5 +1,7 @@
 useDynLib(molevelset)
 
+export(get.levelset.boxes)
+export(get.levelset.lines)
 export(in.molevelset)
 
 export(molevelset)

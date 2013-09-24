@@ -1,3 +1,35 @@
+get.levelset.boxes <- function(levelset.estimate, inset=TRUE) {
+    # Get the boxes from a levelset estimate.
+    #
+    # Args:
+    #   le: molevelset object
+    #   inset: logical, indicates to get the inset or non-inset boxes.
+    # Returns:
+    #   List of levelset boxes, the inset boxes if inset is TRUE, the non
+    #   inset boxes otherwise.
+    boxes <- levelset.estimate$inset_boxes
+    if (!inset) {
+        boxes <- levelset.estimate$non_inset_boxes
+    }
+    return(lapply(boxes, "[[", "box"))
+}
+
+get.levelset.lines <- function(levelset.estimate, inset=TRUE) {
+    # Get the line endpoints for the borer of a levelset estimate.
+    #
+    # Args:
+    #   le: molevelset object.
+    #   inset: logical, indicates to get the inset, or non-inset lines.
+    boxes <- get.levelset.boxes(le, inset)
+    if (!length(boxes)) {
+        return(list())
+    }
+    
+    stopifnot(ncol(boxes[[1]]) == 2)
+    return(.get.levelset.lines.2d(boxes))
+}
+
+
 get.box.polygons <- function(boxes) {
   # Get polygons representing a box collection.
   #
@@ -93,15 +125,6 @@ get.box.polygons <- function(boxes) {
                       function(i) unname(cbind(y.lines[i, 3], y.lines[i, 1:2])))
 
     return(c(x.lines, y.lines))
-}
-
-get.levelset.lines <- function(boxes) {
-    if (!length(boxes)) {
-        return(list())
-    }
-    
-    stopifnot(ncol(boxes[[1]]) == 2)
-    return(.get.levelset.lines.2d(boxes))
 }
 
 .is.color.specification <- function(col) {

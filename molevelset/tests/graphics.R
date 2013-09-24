@@ -67,6 +67,22 @@ TestGetLevelsetLines2d <- function() {
     return(TRUE)
 }
 
+TestGetLevelsetBoxes <- function() {
+    X <- cbind(c(0.25, 0.25, 0.75, 0.75),
+               c(0.25, 0.75, 0.75, 0.25))
+    Y <- c(0, 1, 1, 0)
+    le <- molevelset(X, Y, gamma=0.5, k.max=2, rho=0.01)
+
+    inset.boxes <- get.levelset.boxes(le)
+    non.inset.boxes <- get.levelset.boxes(le, inset=FALSE)
+
+    stopifnot(isTRUE(all.equal(list(cbind(c(0, 1), c(0.5, 1))),
+                               inset.boxes)),
+              isTRUE(all.equal(list(cbind(c(0, 1), c(0, 0.50))),
+                               non.inset.boxes)))
+    return(TRUE)
+}
+
 test.names <- ls(pattern="^Test.*")
 test.functions <- lapply(test.names, get)
 test.i <- which(sapply(test.functions, class) == "function")
